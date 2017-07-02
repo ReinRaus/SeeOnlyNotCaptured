@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.0.1
+// @version      1.0.2
 // @description  Now you see me
 // @author       ReinRaus
-// @updateURL    https://reinraus.ru/see_only_not_captured.user.js
+// @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
 // @match        https://upor.in/caps/*
 // @grant        none
 // ==/UserScript==
