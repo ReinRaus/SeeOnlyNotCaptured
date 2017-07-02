@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.0.3
+// @version      1.0.4
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -63,7 +63,6 @@
         result.labels = {};
         Array.prototype.slice.call(document.getElementsByClassName( "dragLabels" )).forEach( item=>{
             var m = item.style.transform.match( regex );
-            console.log( item );
             result.labels[ item.innerText ] = [ m[0], m[1] ];
         } );
         NCstorage.push( result );
@@ -91,7 +90,6 @@
                         if ( labels[j].innerText in NCstorage[i].labels ){
                             var coords = NCstorage[i].labels[labels[j].innerText];
                             var transform = `translate3d(${coords[0]}px,${coords[1]}px,0px)`;
-                                                        console.log( transform );
                             labels[j].style.transform = transform;
                             labels[j].dragListener();
                         }
@@ -131,15 +129,27 @@
             
             L.DomUtil.setPosition( div, L.point( x0, y0-25 ) );
             var drag = new L.Draggable( div );
-            var dragListener = ((element, ev)=>{
-                    var pos = element.style.transform.match( regex );
+            var dragListener = ((element)=>{
+                    var pos = element.style.transform.match( regex ); // массив крайней левой точки элемента
                     var hr = element.getElementsByTagName( 'hr' )[0];
-                    var x0 = hr.dataset.x0;
-                    var y0 = hr.dataset.y0;
-                    var width = Math.sqrt( Math.pow( pos[0]-x0, 2) + Math.pow( pos[1]-y0, 2) );
+                    var span = element.getElementsByTagName( 'span' )[0];
+                    var width = span.getBoundingClientRect().width; // ширина подписи
+                    var x0 = hr.dataset.x0*1; // х куда надо направить
+                    var y0 = hr.dataset.y0*1; // у куда надо направить
+                    pos[0] = pos[0]*1;
+                    var shiftHr = 0;
+                    var center  = pos[0] + width/2;
+                    if ( center > x0 ) {
+                        shiftHr = pos[0]>x0 ? 1 : (x0-pos[0])*2;
+                    } else {
+                        shiftHr = width-1;
+                    }
+                    pos[0] += shiftHr;
+                    hr.style.left = shiftHr+"px";
+                    var widthHr = Math.sqrt( Math.pow( pos[0]-x0, 2) + Math.pow( pos[1]-y0, 2) );
                     var rotate = Math.atan2( pos[1]-y0, pos[0]-x0 ) + Math.PI;
                     hr.style.transform = "rotate("+rotate+"rad";
-                    hr.style.width = width + "px";
+                    hr.style.width = widthHr + "px";
                 }).bind( null, div );
             drag.addEventListener( "drag", dragListener );
             drag.enable();
