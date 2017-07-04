@@ -7,7 +7,7 @@
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
 // @match        https://upor.in/caps/*
 // @grant        none
-// @run-at       document-start
+// @run-at       document-body
 // ==/UserScript==
 
 // запускается после head, но перед body
