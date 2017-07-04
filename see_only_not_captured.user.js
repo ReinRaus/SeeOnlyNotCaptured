@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.0.6
+// @version      1.0.7
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -37,22 +37,30 @@
     
     window.NCloadStorage = function(){
         try {
-            window.NCstorage = JSON.parse( localStorage["NCstorage"] );
+            window.NCstorage = JSON.parse( localStorage.NCstorage );
+            if ( !NCstorage.views ) throw "old version";
         } catch(e) {
-            window.NCstorage = [];
+            // если есть что-то уже, то это старая версия- помещаем в labels
+            var labels = NCstorage.length > 0 ? NCstorage : [];
+            window.NCstorage = {
+                'views' : labels,
+                'deleted': [] };
         }
         var div = document.getElementById( "NCsavedView" );
         if ( div ) {
             var html = "";
-            for ( var i in NCstorage ) {
+            for ( var i in NCstorage.views ) {
                 html+= `<div><b>${i*1+1}</b> <a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
             }
             div.innerHTML = html;
         }
+        for ( var i in NCstorage.deleted ) {
+            prt[ NCstorage.deleted[i].lat+"|"+NCstorage.deleted[i].lng ] = 0;
+        }
     };
     
     window.NCsaveStorage = function() {
-        localStorage["NCstorage"] = JSON.stringify( NCstorage );
+        localStorage.NCstorage = JSON.stringify( NCstorage );
         NCloadStorage();
     };
     
@@ -65,19 +73,19 @@
             var m = item.style.transform.match( regex );
             result.labels[ item.innerText ] = [ m[0], m[1] ];
         } );
-        NCstorage.push( result );
+        NCstorage.views.push( result );
         NCsaveStorage();
     };
     
     window.NCdeleteView = function( i ) {
-        if ( NCstorage[i] ) {
-            NCstorage.splice( i, 1 );
+        if ( NCstorage.views[i] ) {
+            NCstorage.views.splice( i, 1 );
             NCsaveStorage();
         }
     };
     
     window.NCloadView = function( i ) {
-        if ( NCstorage[i] ) {
+        if ( NCstorage.views[i] ) {
             map.on( "zoomend", function zoomEndListener() {
                 if ( !window.showOnlyNC ) onShowNCChange();
                 var oldCallback = uGeo.callback;
@@ -87,8 +95,8 @@
                     NCexport( new Event( "xxx" ) );
                     var labels = document.getElementsByClassName( "dragLabels" );
                     for ( var j=0; j<labels.length; j++ ) {
-                        if ( labels[j].innerText in NCstorage[i].labels ){
-                            var coords = NCstorage[i].labels[labels[j].innerText];
+                        if ( labels[j].innerText in NCstorage.views[i].labels ){
+                            var coords = NCstorage.views[i].labels[labels[j].innerText];
                             var transform = `translate3d(${coords[0]}px,${coords[1]}px,0px)`;
                             labels[j].style.transform = transform;
                             labels[j].dragListener();
@@ -97,7 +105,17 @@
                 };
                 map.off( "zoomend", zoomEndListener );
             } );
-            map.flyTo( [NCstorage[i].center.lat, NCstorage[i].center.lng], NCstorage[i].zoom );
+            map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
+        }
+    };
+    
+    window.NChide = (el) => {
+        var coords = el.parentNode.innerHTML.match( /\b[\d.]+,[\d.]+\b/ )[0].split( "," );
+        var title = el.parentNode.innerHTML.match( /^[\s\S]+?(?=<br>)/i )[0];
+        if ( confirm( "Подвердите: указанный портал будет отмечен как захваченный (только в этом браузере)" ) ) {
+            NCstorage.deleted.push( {lat:coords[0]*1, lng:coords[1]*1, title:title } );
+            NCsaveStorage();
+            document.location.reload();
         }
     };
     
@@ -178,6 +196,7 @@
          var feat = resp.features;
          if ( showOnlyNC && feat ){
              resp.features = feat.filter( customFilter );
+             resp.features.forEach( item => { item.properties.popupContent = item.properties.popupContent.replace( /<br>$/i, "<a href='#' style='float:right' onclick='NChide(this)'>hide</a>" ); } );
          };
          self.callback(resp);
          //end inject` );
@@ -238,3 +257,4 @@
     } );
     // конец исполняется после body
 })();
+
