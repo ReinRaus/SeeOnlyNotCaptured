@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.0.4
+// @version      1.0.5
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
 // @match        https://upor.in/caps/*
 // @grant        none
-// @run-at       document-body
+// @run-at       document-start
 // ==/UserScript==
 
 // запускается после head, но перед body
@@ -140,7 +140,7 @@
                     var shiftHr = 0;
                     var center  = pos[0] + width/2;
                     if ( center > x0 ) {
-                        shiftHr = pos[0]>x0 ? 1 : (x0-pos[0])*2;
+                        shiftHr = pos[0]>x0 ? 1 : (x0-pos[0])*1.618; // золотое сечение
                     } else {
                         shiftHr = width-1;
                     }
