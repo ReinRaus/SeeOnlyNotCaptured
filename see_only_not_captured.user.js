@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.0.7
+// @version      1.0.8
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -41,7 +41,7 @@
             if ( !NCstorage.views ) throw "old version";
         } catch(e) {
             // если есть что-то уже, то это старая версия- помещаем в labels
-            var labels = NCstorage.length > 0 ? NCstorage : [];
+            var labels = window.NCstorage && NCstorage.length > 0 ? NCstorage : [];
             window.NCstorage = {
                 'views' : labels,
                 'deleted': [] };
