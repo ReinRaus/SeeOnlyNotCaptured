@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.1.0
+// @version      1.1.1
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -192,7 +192,8 @@ window.NCstartMOD = function () {
          var feat = resp.features;
          if ( showOnlyNC && feat ){
              resp.features = feat.filter( customFilter );
-             resp.features.forEach( item => { item.properties.popupContent = item.properties.popupContent.replace( /<br>$/i, "<a href='#' style='float:right' onclick='NChide(this)'>hide</a>" ); } );
+console.log( resp.features );
+             resp.features.forEach( item => { item.properties.popupContent = item.properties.popupContent.replace( /<br>$/i, "<a href='https://rzst.io/stats/?ll="+[...item.geometry.coordinates].reverse().join('%2C')+"' target='_blank' style='float:right'>stats</a><br/><a href='#' style='float:right' onclick='NChide(this)'>hide</a>" ); } );
          };
          self.callback(resp);
          //end inject` );
