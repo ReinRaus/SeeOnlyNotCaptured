@@ -1,15 +1,19 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.1.1
+// @version      1.2.0
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
-// @match        https://upor.in/caps/*
-// @grant        none
+// @include      https://upor.in/caps*
+// @include      https://*ingress.com/intel*
+// @grant        unsafeWindow
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-start
 // ==/UserScript==
 
+function wrapper() { // wrapper: не использовать НЕ латиницу в регулярных выражениях, если все-таки нужно, то new RegExp
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
@@ -129,6 +133,28 @@ window.NCstartMOD = function () {
         return !(item.geometry.coordinates[1]+"|"+item.geometry.coordinates[0] in prt);
     };
     
+    window.NCshowOwners = function() {
+        var next = function() {
+            if ( !map.hasLayer( uGeo ) ) return;
+            var markers = uGeo.getLayers();
+            var portalsInfo = GM.GM_getValue( "NC_portals" );
+            var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
+            markers.forEach( (item)=> {
+                var key = item.feature.geometry.coordinates.join( "," );
+                if ( key in portalsInfo ) item._icon.style.borderColor = colors[ portalsInfo[key] ];
+            } );
+        };
+        
+        GM.GM_setValue( "NC_portals", null );
+        var win = window.open( "https://www.ingress.com/intel?ll="+map.getCenter().lat+","+map.getCenter().lng+"&z=15&NCgetPortals=get" );
+        var interval = window.setInterval( ()=>{
+            if ( win.closed && GM.GM_getValue( "NC_portals" ) ) {
+                window.clearInterval( interval );
+                next();
+            }
+        }, 20 );
+    };
+    
     window.NCexport = function(ev) {
         var layers = uGeo.getLayers();
         var map = document.getElementById( "map" );
@@ -192,7 +218,6 @@ window.NCstartMOD = function () {
          var feat = resp.features;
          if ( showOnlyNC && feat ){
              resp.features = feat.filter( customFilter );
-console.log( resp.features );
              resp.features.forEach( item => { item.properties.popupContent = item.properties.popupContent.replace( /<br>$/i, "<a href='https://rzst.io/stats/?ll="+[...item.geometry.coordinates].reverse().join('%2C')+"' target='_blank' style='float:right'>stats</a><br/><a href='#' style='float:right' onclick='NChide(this)'>hide</a>" ); } );
          };
          self.callback(resp);
@@ -232,7 +257,7 @@ console.log( resp.features );
         L.Control.ShowNotCaptured = L.Control.extend({
             onAdd: function(map) {
                 var html = L.DomUtil.create('div');
-                html.innerHTML = "<div class='NCbutton'><div style='display:none;float:left; background:white; padding:3px;'><b>bronze</b> mod off<br/><b>gold</b> mod on, but small zoom <br/><b>onyx</b> mod on<br/><b>click</b> mod on/off<br/><button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button><div id='NCsavedView'></div></div><img id='showNCImg' onclick='onShowNCChange();' width=48 height=48 /></div>";
+                html.innerHTML = "<div class='NCbutton'><div style='display:none;float:left; background:white; padding:3px;'><b>bronze</b> mod off<br/><b>gold</b> mod on, but small zoom <br/><b>onyx</b> mod on<br/><b>click</b> mod on/off<br/><button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/><button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button><div id='NCsavedView'></div></div><img id='showNCImg' onclick='onShowNCChange();' width=48 height=48 /></div>";
                 return html;
             },
 
@@ -253,23 +278,65 @@ console.log( resp.features );
             document.getElementById( 'NCbutSaveView' ).disabled = true;
         } );
         var butt = document.getElementById( "NCbutExpText" );
-        butt.addEventListener("click", NCexport, false);
+        butt.addEventListener( "click", NCexport, false);
+        butt = document.getElementById( "NCbutShowOwners" );
+        butt.addEventListener( "click", NCshowOwners, false );
         NCloadStorage();
     } );
     // конец исполняется после body
 };
 
-// началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
-Object.defineProperty( window, "L", {
-    configurable: true,
-    set: (val)=>{
-        Object.defineProperty( val, "UGeoJSONLayer", { configurable: true, set:()=> {
-            delete val.UGeoJSONLayer;
-            delete window.L;
-            window.L = window.Lbackup;
-            NCstartMOD();
-        } } );
-        window.Lbackup = val;
-      },
-    get: ()=>{ return window.Lbackup; }
-} );
+// один мод на два сайта
+if ( window.location.host == "upor.in" ) {
+//debugger;
+    // началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
+    this.context = window;
+    Object.defineProperty( window, "L", {
+        configurable: true,
+        set: (val)=>{
+            Object.defineProperty( val, "UGeoJSONLayer", { configurable: true, set:()=> {
+                delete val.UGeoJSONLayer;
+                delete window.L;
+                window.L = window.Lbackup;
+                NCstartMOD();
+            } } );
+            window.Lbackup = val;
+        },
+        get: ()=>{ return window.Lbackup; }
+    } );
+
+} else {
+    
+    var interval;
+    var waitForMap = ( callback )=>{
+        if ( window.map && $("span.map span.help").text() == "done" ) {
+            window.clearInterval ( interval );
+            if ( callback ) callback();
+        }
+    };
+    
+    var prepareBigZoom = ()=> {
+        if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
+            document.body.style.zoom = 0.5;
+            map._onResize();
+            window.setTimeout( ()=> {interval = window.setInterval( waitForMap.bind( null, writePortalsToStorage ), 20 );}, 1000 );
+        }
+    };
+    
+    var writePortalsToStorage = ()=> {
+        var result = {};
+        for ( var item in portals ) {
+            result[ portals[item]._latlng.lng+","+portals[item]._latlng.lat ] = portals[item].options.data.team;
+        }
+        GM.GM_setValue( "NC_portals", result );
+        window.close();
+    };
+    interval = window.setInterval( waitForMap.bind( null, prepareBigZoom ), 20 );
+    
+}
+}// wrapper
+
+unsafeWindow.GM = window;
+var script = unsafeWindow.document.createElement( "script" );
+script.text = "("+wrapper.toString()+")()";
+unsafeWindow.document.head.appendChild( script );
