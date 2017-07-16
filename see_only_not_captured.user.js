@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.0
+// @version      1.2.1
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -14,6 +14,15 @@
 // ==/UserScript==
 
 function wrapper() { // wrapper: не использовать НЕ латиницу в регулярных выражениях, если все-таки нужно, то new RegExp
+window.NCwaitTrue = function( expressionFunc, next, delay=20 ) {
+    var interval = window.setInterval( ()=>{
+            if ( expressionFunc() ) {
+                window.clearInterval( interval );
+                next();
+            }
+        }, delay );
+};
+
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
@@ -53,7 +62,7 @@ window.NCstartMOD = function () {
         if ( div ) {
             var html = "";
             for ( var i in NCstorage.views ) {
-                html+= `<div><b>${i*1+1}</b> <a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
+                html+= `<div><b>${i*1+1}</b> <a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCloadView(${i},true);'>+owners</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
             }
             div.innerHTML = html;
         }
@@ -87,7 +96,7 @@ window.NCstartMOD = function () {
         }
     };
     
-    window.NCloadView = function( i ) {
+    window.NCloadView = function( i, loadOwners ) {
         if ( NCstorage.views[i] ) {
             map.on( "zoomend", function zoomEndListener() {
                 if ( !window.showOnlyNC ) onShowNCChange();
@@ -109,6 +118,9 @@ window.NCstartMOD = function () {
                 map.off( "zoomend", zoomEndListener );
             } );
             map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
+            if ( loadOwners ) NCwaitTrue(
+                ()=>NCstorage.views[i].zoom==map.getZoom(),
+                NCshowOwners );
         }
     };
     
@@ -308,8 +320,8 @@ if ( window.location.host == "upor.in" ) {
 } else {
     
     var interval;
-    var waitForMap = ( callback )=>{
-        if ( window.map && $("span.map span.help").text() == "done" ) {
+    var waitForMap = ( callback, status )=>{
+        if ( window.map && $("span.map span.help").text() == status ) {
             window.clearInterval ( interval );
             if ( callback ) callback();
         }
@@ -319,7 +331,7 @@ if ( window.location.host == "upor.in" ) {
         if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
             document.body.style.zoom = 0.5;
             map._onResize();
-            window.setTimeout( ()=> {interval = window.setInterval( waitForMap.bind( null, writePortalsToStorage ), 20 );}, 1000 );
+            window.setTimeout( ()=> {interval = window.setInterval( waitForMap.bind( null, writePortalsToStorage, "done" ), 20 );}, 1000 );
         }
     };
     
@@ -331,7 +343,7 @@ if ( window.location.host == "upor.in" ) {
         GM.GM_setValue( "NC_portals", result );
         window.close();
     };
-    interval = window.setInterval( waitForMap.bind( null, prepareBigZoom ), 20 );
+    interval = window.setInterval( waitForMap.bind( null, prepareBigZoom, "loading" ), 20 );
     
 }
 }// wrapper
