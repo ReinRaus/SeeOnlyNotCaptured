@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.1
+// @version      1.2.2
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -82,8 +82,9 @@ window.NCstartMOD = function () {
         result.zoom = map.getZoom();
         result.labels = {};
         Array.prototype.slice.call(document.getElementsByClassName( "dragLabels" )).forEach( item=>{
-            var m = item.style.transform.match( regex );
-            result.labels[ item.innerText ] = [ m[0], m[1] ];
+            var coords = item.style.transform.match( regex );
+            var center = item.getElementsByTagName( "hr" )[0].dataset;
+            result.labels[ item.innerText ] = [ coords[0]*1-center.x0*1, coords[1]*1-center.y0*1 ];
         } );
         NCstorage.views.push( result );
         NCsaveStorage();
@@ -108,8 +109,9 @@ window.NCstartMOD = function () {
                     var labels = document.getElementsByClassName( "dragLabels" );
                     for ( var j=0; j<labels.length; j++ ) {
                         if ( labels[j].innerText in NCstorage.views[i].labels ){
-                            var coords = NCstorage.views[i].labels[labels[j].innerText];
-                            var transform = `translate3d(${coords[0]}px,${coords[1]}px,0px)`;
+                            var shift = NCstorage.views[i].labels[labels[j].innerText];
+                            var center = labels[j].getElementsByTagName( "hr" )[0].dataset;
+                            var transform = `translate3d(${center.x0*1+shift[0]*1}px,${center.y0*1+shift[1]*1}px,0px)`;
                             labels[j].style.transform = transform;
                             labels[j].dragListener();
                         }
