@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.3
+// @version      1.2.4
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -298,6 +298,9 @@ window.NCstartMOD = function () {
         NCloadStorage();
     } );
     // конец исполняется после body
+    document.addEventListener( "DOMContentLoaded", function(){
+        window.setTimeout( ()=>{ if ( !document.getElementsByClassName( "NCbutton" ) ) window.location.href = "https://upor.in/caps/?rand="+Math.random();}, 10000 );
+    } );
 };
 
 // один мод на два сайта
