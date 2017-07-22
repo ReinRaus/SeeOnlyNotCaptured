@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.7
+// @version      1.2.9
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -23,12 +23,20 @@ window.NCwaitTrue = function( expressionFunc, next, delay=20 ) {
         }, delay );
 };
 
+window.NCinjectCSS = function( css ) {
+    var style = document.createElement( "style" );
+    style.type = 'text/css';
+    style.appendChild(document.createTextNode(css));
+    document.body.appendChild( style );
+    console.log( "added "+css );
+};
+
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
     window.showOnlyNC = false;
     var regex = /[-+]?\d+\.?\d*([eE][-+]?\d+)?(?=px)/g; // https://regex101.com/r/St6vjr/1
-    
+
     window.NCisNeedRunning = function( run ) {
         selectMedalImg( run ? "onyx" : "gold" );
         if ( !run ) uGeo.callback( [] );
@@ -324,22 +332,6 @@ if ( window.location.host == "upor.in" ) {
 
 } else {
     
-    var interval;
-    var waitForMap = ( callback, status )=>{
-        if ( window.map && $("span.map span.help").text() == status ) {
-            window.clearInterval ( interval );
-            if ( callback ) callback();
-        }
-    };
-    
-    var prepareBigZoom = ()=> {
-        if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
-            document.body.style.zoom = 0.4;
-            NCwaitTrue( ()=>{ return window.map!==undefined && map._onResize!==undefined; }, map._onResize, 20 );
-            window.setTimeout( ()=> {interval = window.setInterval( waitForMap.bind( null, writePortalsToStorage, "done" ), 20 );}, 1000 );
-        }
-    };
-    
     var writePortalsToStorage = ()=> {
         var result = {};
         for ( var item in portals ) {
@@ -348,9 +340,14 @@ if ( window.location.host == "upor.in" ) {
         GM.GM_setValue( "NC_portals", result );
         window.close();
     };
-
-     document.addEventListener("DOMContentLoaded", prepareBigZoom );
     
+    if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
+        NCwaitTrue( ()=>{ return (typeof( window.map )!=="undefined" && typeof( map._onResize )!=="undefined"); }, ()=>{
+            NCinjectCSS( "body {zoom:0.4 !important}" );
+            map._onResize();
+            NCwaitTrue( ()=> $("span.map span.help").text() == "done", writePortalsToStorage );
+        } );
+    }
 }
 }// wrapper
 
