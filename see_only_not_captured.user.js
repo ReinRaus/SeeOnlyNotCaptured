@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.2
+// @version      1.2.3
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -331,8 +331,7 @@ if ( window.location.host == "upor.in" ) {
     
     var prepareBigZoom = ()=> {
         if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
-            document.body.style.zoom = 0.5;
-            map._onResize();
+            document.body.style.zoom = 0.4;
             window.setTimeout( ()=> {interval = window.setInterval( waitForMap.bind( null, writePortalsToStorage, "done" ), 20 );}, 1000 );
         }
     };
@@ -345,7 +344,8 @@ if ( window.location.host == "upor.in" ) {
         GM.GM_setValue( "NC_portals", result );
         window.close();
     };
-    interval = window.setInterval( waitForMap.bind( null, prepareBigZoom, "loading" ), 20 );
+
+     document.addEventListener("DOMContentLoaded", prepareBigZoom );
     
 }
 }// wrapper
