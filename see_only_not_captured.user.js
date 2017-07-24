@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         See only not captured portals
 // @namespace    https://upor.in/caps/
-// @version      1.2.9
+// @version      1.3.0
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -28,7 +28,6 @@ window.NCinjectCSS = function( css ) {
     style.type = 'text/css';
     style.appendChild(document.createTextNode(css));
     document.body.appendChild( style );
-    console.log( "added "+css );
 };
 
 window.NCstartMOD = function () {
@@ -70,7 +69,8 @@ window.NCstartMOD = function () {
         if ( div ) {
             var html = "";
             for ( var i in NCstorage.views ) {
-                html+= `<div><b>${i*1+1}</b> <a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCloadView(${i},true);'>+owners</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
+                var name = NCstorage.views[i].name;
+                html+= `<div><input class="NCinputName" onchange="NCrenameView(${i}, this)" value="${name?name:i*1+1}" /><br/><a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCloadView(${i},true);'>+owners</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
             }
             div.innerHTML = html;
         }
@@ -131,6 +131,13 @@ window.NCstartMOD = function () {
             if ( loadOwners ) NCwaitTrue(
                 ()=>NCstorage.views[i].zoom==map.getZoom(),
                 NCshowOwners );
+        }
+    };
+    
+    window.NCrenameView = (key, input)=>{
+        if ( NCstorage.views[key] && input.value ) {
+            NCstorage.views[key].name = input.value;
+            NCsaveStorage();
         }
     };
     
@@ -265,9 +272,7 @@ window.NCstartMOD = function () {
     // исполняется после body
     document.addEventListener("DOMContentLoaded", function(){
         
-        var style = document.createElement( "style" );
-        style.innerHTML = ".NCbutton:hover div {display:block !important;}";
-        document.body.appendChild( style );
+        NCinjectCSS( ".NCbutton:hover div {display:block !important;} .NCinputName { font-weight: bold; border: none; border-top: 1px dotted}" );
         
         var convPortalsToFilter = function( portals ) {
             var result = {};
