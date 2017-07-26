@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         See only not captured portals
+// @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.3.0
+// @version      1.3.1
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -196,7 +196,7 @@ window.NCstartMOD = function () {
             
             var div = document.createElement( "div" );
             div.className = "dragLabels";
-            div.innerHTML = "<HR noshade color=red style='position:absolute;width:10px;z-index:1999;transform:rotate(123deg);transform-origin: 0 0;' data-x0='"+(x0-6)+"' data-y0='"+(y0-15)+"' /><SPAN style='background-color:white;position:absolute;white-space:nowrap;z-index:2000'>"+layers[i].feature.properties.title+"</SPAN>";
+            div.innerHTML = "<HR noshade color=red style='position:absolute;width:10px;z-index:1999;transform:rotate(123deg);transform-origin: 0 0;' data-x0='"+(x0-6)+"' data-y0='"+(y0-15)+"' /><SPAN style='background-color:white;position:absolute;white-space:nowrap;z-index:2000;cursor:move'>"+layers[i].feature.properties.title+"</SPAN>";
             div.style = "z-index:2000;position:absolute;";
             
             L.DomUtil.setPosition( div, L.point( x0, y0-25 ) );
