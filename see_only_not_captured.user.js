@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.3.1
+// @version      1.4.0
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -10,6 +10,8 @@
 // @grant        unsafeWindow
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
+// @connect      reinraus.ru
 // @run-at       document-start
 // ==/UserScript==
 
@@ -30,6 +32,49 @@ window.NCinjectCSS = function( css ) {
     document.body.appendChild( style );
 };
 
+window.NCrequestAPI = function( json ) {
+    return new Promise( (resolve, reject) => {
+        GM.GM_xmlhttpRequest( {
+            method: "POST",
+            url: "https://reinraus.ru/ada/api.php",
+            data: JSON.stringify( json ),
+            headers: {
+                "Content-Type": "application/json"
+            },
+            onload: function(response) {
+                resolve( response );
+            },
+            onerror: function( error ) { reject( error ); }
+        } );
+    } );
+};
+
+window.NCnetworkAPI = {
+    getData : ()=> {
+        if ( !NCstorage.appKey ) return;
+        var json = { appKey: NCstorage.appKey, cmd: "getData" };
+        NCrequestAPI( json ).then(
+            (response)=> {
+                var responseJson = JSON.parse( response.responseText );
+                if ( !responseJson.deleted && NCstorage.deleted ) NCnetworkAPI.setData( NCstorage );
+                for ( var i in responseJson ) NCstorage[i] = responseJson[i];
+                NCsaveStorage();
+            },
+            (error)=> console.log( error )
+        );
+    },
+    setData : (json) => {
+        if ( !json.appKey ) return;
+        var data = JSON.parse( JSON.stringify( json ) );
+        delete data.views;
+        data.cmd = "setData";
+        NCrequestAPI( data ).then(
+            null,
+            (error)=> console.log( error )
+        );
+    }
+};
+    
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
@@ -144,10 +189,12 @@ window.NCstartMOD = function () {
     window.NChide = (el) => {
         var coords = el.parentNode.innerHTML.match( /\b[\d.]+,[\d.]+\b/ )[0].split( "," );
         var title = el.parentNode.innerHTML.match( /^[\s\S]+?(?=<br>)/i )[0];
-        if ( confirm( "Подвердите: указанный портал будет отмечен как захваченный (только в этом браузере)" ) ) {
+        var browsers = NCstorage.appKey ? "во всех браузерах, где указан ключ" : "только в этом браузере";
+        if ( confirm( `Подвердите: указанный портал будет отмечен как захваченный (${browsers})` ) ) {
+            uGeo.onMoveEnd();
             NCstorage.deleted.push( {lat:coords[0]*1, lng:coords[1]*1, title:title } );
             NCsaveStorage();
-            document.location.reload();
+            NCnetworkAPI.setData( NCstorage );
         }
     };
     
@@ -240,6 +287,18 @@ window.NCstartMOD = function () {
         else document.getElementById( "showNCImg" ).src = "data:image/png;base64,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";
     };
     
+    window.NCsetKey = function(){
+        var key = prompt( "Введите полученный ключ" );
+        if ( !key ) return; // cancel button
+        if ( key ) key = key.trim();
+        if ( !key.match( /^[a-z0-9]+X[a-z0-9]+$/i ) ) {
+            alert( "Некорректный ключ" );
+        } else {
+            NCstorage.appKey = key;
+            NCsaveStorage();
+        }
+    };
+    
     // внедряем измененный https://upor.in/js/leaflet.uGeoJSON.js
     var scr = loadURL( 'https://upor.in/js/leaflet.uGeoJSON.js' );
     scr = scr.replace( "self.callback(JSON.parse(this.responseText));", `//injected
@@ -284,7 +343,20 @@ window.NCstartMOD = function () {
         L.Control.ShowNotCaptured = L.Control.extend({
             onAdd: function(map) {
                 var html = L.DomUtil.create('div');
-                html.innerHTML = "<div class='NCbutton'><div style='display:none;float:left; background:white; padding:3px;'><b>bronze</b> mod off<br/><b>gold</b> mod on, but small zoom <br/><b>onyx</b> mod on<br/><b>click</b> mod on/off<br/><button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/><button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button><div id='NCsavedView'></div></div><img id='showNCImg' onclick='onShowNCChange();' width=48 height=48 /></div>";
+                html.innerHTML = `
+<div class='NCbutton'>
+    <div style='display:none;float:left; background:white; padding:3px;'>
+        <b>bronze</b> mod off<br/>
+        <b>gold</b> mod on, but small zoom <br/>
+        <b>onyx</b> mod on<br/>
+        <b>click</b> mod on/off<br/>
+        <button id='NCbutAppKey' alt="Ключ можно получить в телеграм-чате группы мода">Set key</button><br/>
+        <button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/>
+        <button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button>
+        <div id='NCsavedView'></div>
+    </div>
+    <img id='showNCImg' onclick='onShowNCChange();' width=48 height=48 />
+</div>`;
                 return html;
             },
 
@@ -308,7 +380,10 @@ window.NCstartMOD = function () {
         butt.addEventListener( "click", NCexport, false);
         butt = document.getElementById( "NCbutShowOwners" );
         butt.addEventListener( "click", NCshowOwners, false );
+        butt = document.getElementById( "NCbutAppKey" );
+        butt.addEventListener( "click", NCsetKey, false );
         NCloadStorage();
+        NCnetworkAPI.getData();
     } );
     // конец исполняется после body
     document.addEventListener( "DOMContentLoaded", function(){
