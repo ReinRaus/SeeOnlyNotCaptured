@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.0
+// @version      1.4.2
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -72,6 +72,11 @@ window.NCnetworkAPI = {
             null,
             (error)=> console.log( error )
         );
+    },
+    sendMessage : (message)=> {
+        if ( !NCstorage.appKey ) return;
+        var json = { appKey: NCstorage.appKey, cmd: "sendMessage", message: message };
+        NCrequestAPI( json );
     }
 };
     
@@ -151,32 +156,34 @@ window.NCstartMOD = function () {
     };
     
     window.NCloadView = function( i, loadOwners ) {
-        if ( NCstorage.views[i] ) {
-            map.on( "zoomend", function zoomEndListener() {
-                if ( !window.showOnlyNC ) onShowNCChange();
-                var oldCallback = uGeo.callback;
-                uGeo.callback = function( data ) {
-                    oldCallback.call( uGeo, data );
-                    uGeo.callback = oldCallback;
-                    NCexport( new Event( "xxx" ) );
-                    var labels = document.getElementsByClassName( "dragLabels" );
-                    for ( var j=0; j<labels.length; j++ ) {
-                        if ( labels[j].innerText in NCstorage.views[i].labels ){
-                            var shift = NCstorage.views[i].labels[labels[j].innerText];
-                            var center = labels[j].getElementsByTagName( "hr" )[0].dataset;
-                            var transform = `translate3d(${center.x0*1+shift[0]*1}px,${center.y0*1+shift[1]*1}px,0px)`;
-                            labels[j].style.transform = transform;
-                            labels[j].dragListener();
+        return new Promise( (resolve, reject)=>{
+            if ( NCstorage.views[i] ) {
+                map.on( "zoomend", function zoomEndListener() {
+                    if ( !window.showOnlyNC ) onShowNCChange();
+                    var oldCallback = uGeo.callback;
+                    uGeo.callback = function( data ) {
+                        oldCallback.call( uGeo, data );
+                        uGeo.callback = oldCallback;
+                        NCexport( new Event( "xxx" ) );
+                        var labels = document.getElementsByClassName( "dragLabels" );
+                        for ( var j=0; j<labels.length; j++ ) {
+                            if ( labels[j].innerText in NCstorage.views[i].labels ){
+                                var shift = NCstorage.views[i].labels[labels[j].innerText];
+                                var center = labels[j].getElementsByTagName( "hr" )[0].dataset;
+                                var transform = `translate3d(${center.x0*1+shift[0]*1}px,${center.y0*1+shift[1]*1}px,0px)`;
+                                labels[j].style.transform = transform;
+                                labels[j].dragListener();
+                            }
                         }
-                    }
-                };
-                map.off( "zoomend", zoomEndListener );
-            } );
-            map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
-            if ( loadOwners ) NCwaitTrue(
-                ()=>NCstorage.views[i].zoom==map.getZoom(),
-                NCshowOwners );
-        }
+                    };
+                    map.off( "zoomend", zoomEndListener );
+                } );
+                map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
+                if ( loadOwners ) NCwaitTrue(
+                    ()=>NCstorage.views[i].zoom==map.getZoom(),
+                    ()=>{ NCshowOwners().then( ()=>resolve() ); } );
+            }
+        } );
     };
     
     window.NCrenameView = (key, input)=>{
@@ -210,25 +217,24 @@ window.NCstartMOD = function () {
     };
     
     window.NCshowOwners = function() {
-        var next = function() {
-            if ( !map.hasLayer( uGeo ) ) return;
-            var markers = uGeo.getLayers();
-            var portalsInfo = GM.GM_getValue( "NC_portals" );
-            var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
-            markers.forEach( (item)=> {
-                var key = item.feature.geometry.coordinates.join( "," );
-                if ( key in portalsInfo ) item._icon.style.borderColor = colors[ portalsInfo[key] ];
-            } );
-        };
-        
-        GM.GM_setValue( "NC_portals", null );
-        var win = window.open( "https://www.ingress.com/intel?ll="+map.getCenter().lat+","+map.getCenter().lng+"&z=15&NCgetPortals=get" );
-        var interval = window.setInterval( ()=>{
-            if ( win.closed && GM.GM_getValue( "NC_portals" ) ) {
-                window.clearInterval( interval );
-                next();
-            }
-        }, 20 );
+        return new Promise( (resolve, reject)=>{
+            var next = function() {
+                if ( !map.hasLayer( uGeo ) ) return;
+                var markers = uGeo.getLayers();
+                var portalsInfo = GM.GM_getValue( "NC_portals" );
+                var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
+                markers.forEach( (item)=> {
+                    var key = item.feature.geometry.coordinates.join( "," );
+                    if ( key in portalsInfo ) item._icon.style.borderColor = colors[ portalsInfo[key] ];
+                } );
+                resolve();
+            };
+
+            GM.GM_setValue( "NC_portals", null );
+            GM.GM_setValue( "NC_getPortals", true );
+            var win = window.open( "https://www.ingress.com/intel?ll="+map.getCenter().lat+","+map.getCenter().lng+"&z=15" );
+            NCwaitTrue( ()=>win.closed && GM.GM_getValue( "NC_portals" ), next );
+        } );
     };
     
     window.NCexport = function(ev) {
@@ -299,6 +305,41 @@ window.NCstartMOD = function () {
         }
     };
     
+    window.NCsendTelegramRepeat = function(){
+        window.setInterval( NCsendTelegramOnce, document.getElementById("NCtelegramDelay").value*60000 );
+    };
+    
+    window.NCsendTelegramOnce = function(){
+        var err;
+        if ( !NCstorage.appKey ) err = "Не задан ключ";
+        if ( !NCstorage.views || NCstorage.views.length === 0 ) err = "Отсутствуют сохраненные виды";
+        if (err) {
+            alert( err );
+            return;
+        }
+        var i = 0;
+        var text = "";
+        var loadRecursive = function() {
+            text+= `*${NCstorage.views[i].name}*\n`;
+            if ( !map.hasLayer( uGeo ) ) return;
+            var markers = uGeo.getLayers();
+            var portalsInfo = GM.GM_getValue( "NC_portals" );
+            var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
+            markers.forEach( (item)=> {
+                var key = item.feature.geometry.coordinates.join( "," );
+                if ( key in portalsInfo ) {
+                    if ( portalsInfo[key] == "E" ) text+= "Ⓔ "+item.feature.properties.title+"\n";
+                    else if ( portalsInfo[key] == "N" ) text+= "◯ "+item.feature.properties.title+"\n";
+                }
+            } );
+            text+= "\n";
+            i++;
+            if ( i < NCstorage.views.length ) NCloadView( i, true ).then( loadRecursive );
+            else NCnetworkAPI.sendMessage( text );
+        };
+        NCloadView( i, true ).then( loadRecursive );
+    };
+    
     // внедряем измененный https://upor.in/js/leaflet.uGeoJSON.js
     var scr = loadURL( 'https://upor.in/js/leaflet.uGeoJSON.js' );
     scr = scr.replace( "self.callback(JSON.parse(this.responseText));", `//injected
@@ -354,6 +395,7 @@ window.NCstartMOD = function () {
         <button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/>
         <button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button>
         <div id='NCsavedView'></div>
+        <button id='NCbutSendTelegram'>Send to TLG</button> every <input id="NCtelegramDelay" size=1 value=30 />min
     </div>
     <img id='showNCImg' onclick='onShowNCChange();' width=48 height=48 />
 </div>`;
@@ -382,6 +424,8 @@ window.NCstartMOD = function () {
         butt.addEventListener( "click", NCshowOwners, false );
         butt = document.getElementById( "NCbutAppKey" );
         butt.addEventListener( "click", NCsetKey, false );
+        butt = document.getElementById( "NCbutSendTelegram" );
+        butt.addEventListener( "click", NCsendTelegramRepeat, false );
         NCloadStorage();
         NCnetworkAPI.getData();
     } );
@@ -421,7 +465,8 @@ if ( window.location.host == "upor.in" ) {
         window.close();
     };
     
-    if ( window.location.href.match( /\bNCgetPortals=get\b/i ) ) {
+    if ( GM.GM_getValue( "NC_getPortals" ) ) {
+        GM.GM_setValue( "NC_getPortals", null );
         NCwaitTrue( ()=>{ return (typeof( window.map )!=="undefined" && typeof( map._onResize )!=="undefined"); }, ()=>{
             NCinjectCSS( "body {zoom:0.4 !important}" );
             map._onResize();
