@@ -133,9 +133,23 @@ window.NCstartMOD = function () {
         for ( var j in NCstorage.deleted ) {
             prt[ NCstorage.deleted[j].lat+"|"+NCstorage.deleted[j].lng ] = 0;
         }
-        
+
         div = document.getElementById( "NCkeyWidgetKeyStatus" );
-        div.innerHTML = NCstorage.appKey ? "ключ введен" : "ключ не введен";
+        div.innerHTML = NCstorage.appKey ? "введен" : "отсутствует";
+
+        div = document.getElementById( "NCmessageWidgetStatus" );
+        if ( window.NCmessageIntervalID ) {
+            div.innerHTML = `ВКЛ (${NCstorage.messageInterval} мин)`;
+            document.getElementById( "NCmessageInterval" ).classList.add( "NCmenuHidded" );
+            document.getElementById( "NCbutSendTelegram" ).classList.add( "NCmenuHidded" );
+            document.getElementById( "NCbutStopTelegram" ).classList.remove( "NCmenuHidded" );
+        } else {
+            div.innerHTML = "ВЫКЛ";
+            document.getElementById( "NCtelegramDelay" ).value = NCstorage.messageInterval ? NCstorage.messageInterval : 30;
+            document.getElementById( "NCmessageInterval" ).classList.remove( "NCmenuHidded" );
+            document.getElementById( "NCbutSendTelegram" ).classList.remove( "NCmenuHidded" );
+            document.getElementById( "NCbutStopTelegram" ).classList.add( "NCmenuHidded" );
+        }
     };
     
     window.NCsaveStorage = function( reload = true ) {
@@ -321,8 +335,22 @@ window.NCstartMOD = function () {
             NCsaveStorage();
         }
     };
+    
+    window.NCstopTelegram = function(){
+        window.clearInterval( window.NCmessageIntervalID );
+        delete window.NCmessageIntervalID;
+        NCloadStorage();
+    };
+    
     window.NCsendTelegramRepeat = function(){
-        window.setInterval( NCsendTelegramOnce, document.getElementById("NCtelegramDelay").value*60000 );
+        var minutes = parseFloat( document.getElementById("NCtelegramDelay").value );
+        if ( minutes < 1 ) {
+            alert( "Введите число больше 1" );
+            return;
+        }
+        window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnce, minutes*60000 );
+        NCstorage.messageInterval = minutes;
+        NCsaveStorage();
     };
     
     window.NCsendTelegramOnce = function(){
@@ -395,10 +423,12 @@ window.NCstartMOD = function () {
         
         NCinjectCSS( `
 .NCbutton:hover div#NCmenuWidget {display:block !important;}
-div#NCkeyWidget:hover div {display:block !important;}
+div.NCwidget:hover div {display:block !important;}
+div.NCwidget:hover div.NCmenuHidded {display:none !important}
 .NCmenuItem {margin:0px;background:lightcyan; font-weight:bold; borders: solid 1px; cursor:pointer; white-space:nowrap;padding:4px}
 .NCmenuItem:hover {background:lightblue}
 .NCinputName { font-weight: bold; border: none; border-top: 1px dotted}
+.NCmenuHidded {display:none !important}
 #NCstatusText { cursor:pointer; width:100%; text-align:center; background-color: rgba(256, 256, 256, 0.4); font-weight:bold}
                      ` );
         
@@ -415,16 +445,23 @@ div#NCkeyWidget:hover div {display:block !important;}
                 html.innerHTML = `
 <div class='NCbutton'>
     <div id='NCmenuWidget' style='display:none;float:left; background:white;'>
-        <div id='NCkeyWidget' class='NCmenuItem'>
+        <div id='NCkeyWidget' class='NCmenuItem NCwidget'>
            <div style='position:absolute;right:99%;display:none;float:left; background:white;'>
                <div id='NCbutAppKey' class='NCmenuItem'>Ввести ключ</div><div id='NCbutDeleteAppKey' class='NCmenuItem'>Удалить ключ</div>
            </div>
            ◀ КЛЮЧ: <span id='NCkeyWidgetKeyStatus'></span>
         </div>
+        <div id='NCmessageWidget' class='NCmenuItem NCwidget'>
+           <div style='position:absolute;right:99%;display:none;float:left; background:white;'>
+               <div id='NCmessageInterval' class='NCmenuItem'>Интервал: <input id="NCtelegramDelay" size=1 /> мин</div>
+               <div id='NCbutSendTelegram' class='NCmenuItem'>Включить</div>
+               <div id='NCbutStopTelegram' class='NCmenuItem'>Остановить</div>
+           </div>
+           ◀ УВЕДОМЛЕНИЯ: <span id='NCmessageWidgetStatus'></span>
+        </div>
         <button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/>
         <button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button>
         <div id='NCsavedView'></div>
-        <button id='NCbutSendTelegram'>Send to TLG</button> every <input id="NCtelegramDelay" size=1 value=30 />min
     </div>
     <img id='showNCImg' width=48 height=48 /><br/>
     <div id="NCstatusText" onclick='onShowNCChange();'>ВЫКЛ</span>
@@ -458,6 +495,8 @@ div#NCkeyWidget:hover div {display:block !important;}
         butt.addEventListener( "click", NCdeleteKey, false );
         butt = document.getElementById( "NCbutSendTelegram" );
         butt.addEventListener( "click", NCsendTelegramRepeat, false );
+        butt = document.getElementById( "NCbutStopTelegram" );
+        butt.addEventListener( "click", NCstopTelegram, false );
         NCloadStorage();
         if ( NCstorage.running ) NCredrawWidget();
         NCnetworkAPI.getData();
