@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.2
+// @version      1.4.3
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -439,19 +439,16 @@ window.NCstartMOD = function () {
 if ( window.location.host == "upor.in" ) {
 //debugger;
     // началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
-    this.context = window;
     Object.defineProperty( window, "L", {
         configurable: true,
-        set: (val)=>{
-            Object.defineProperty( val, "UGeoJSONLayer", { configurable: true, set:()=> {
-                delete val.UGeoJSONLayer;
-                delete window.L;
-                window.L = window.Lbackup;
+        set: (leaflet)=>{
+            Object.defineProperty( leaflet, "UGeoJSONLayer", { configurable: true, set:()=> {
+                delete window.L.UGeoJSONLayer;
                 NCstartMOD();
             } } );
-            window.Lbackup = val;
-        },
-        get: ()=>{ return window.Lbackup; }
+            delete window.L;
+            window.L = leaflet;
+        }
     } );
 
 } else {
