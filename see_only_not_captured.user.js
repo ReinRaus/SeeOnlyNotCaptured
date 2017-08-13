@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.3
+// @version      1.4.4
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -30,6 +30,26 @@ window.NCinjectCSS = function( css ) {
     style.type = 'text/css';
     style.appendChild(document.createTextNode(css));
     document.body.appendChild( style );
+};
+
+window.loadURLasync = function( url ) {
+    return new Promise( (resolve, reject) => {
+        GM.GM_xmlhttpRequest( {
+            method: "GET",
+            url: url,
+            onload: function(response) {
+                resolve( response );
+            },
+            onerror: function( error ) { reject( error ); }
+        } );
+    } );
+};
+
+window.loadURL = function(url) {
+    var oRequest = new XMLHttpRequest();
+    oRequest.open('GET', url, false);
+    oRequest.send(null);
+    return oRequest.responseText;
 };
 
 window.NCrequestAPI = function( json ) {
@@ -79,7 +99,7 @@ window.NCnetworkAPI = {
         NCrequestAPI( json );
     }
 };
-    
+
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
@@ -227,14 +247,7 @@ window.NCstartMOD = function () {
             NCnetworkAPI.setData( NCstorage );
         }
     };
-    
-    var loadURL = function(url) {
-        var oRequest = new XMLHttpRequest();
-        oRequest.open('GET', url, false);
-        oRequest.send(null);
-        return oRequest.responseText;
-    };
-    
+
     window.customFilter = function( item ){
         return !(item.geometry.coordinates[1]+"|"+item.geometry.coordinates[0] in prt);
     };
@@ -254,7 +267,7 @@ window.NCstartMOD = function () {
             };
 
             GM.GM_setValue( "NC_portals", null );
-            GM.GM_setValue( "NC_getPortals", true );
+            GM.GM_setValue( "NC_getPortals", map.getBounds() );
             var win = window.open( "https://www.ingress.com/intel?ll="+map.getCenter().lat+","+map.getCenter().lng+"&z=15" );
             NCwaitTrue( ()=>win.closed && GM.GM_getValue( "NC_portals" ), next );
         } );
@@ -530,13 +543,20 @@ if ( window.location.host == "upor.in" ) {
             result[ portals[item]._latlng.lng+","+portals[item]._latlng.lat ] = portals[item].options.data.team;
         }
         GM.GM_setValue( "NC_portals", result );
-        window.close();
+        //window.close();
     };
-    
-    if ( GM.GM_getValue( "NC_getPortals" ) ) {
+
+    var bounds = GM.GM_getValue( "NC_getPortals" );
+    if ( bounds ) {
         GM.GM_setValue( "NC_getPortals", null );
         NCwaitTrue( ()=>{ return (typeof( window.map )!=="undefined" && typeof( map._onResize )!=="undefined"); }, ()=>{
-            NCinjectCSS( "body {zoom:0.4 !important}" );
+            var bounds2 = map.getBounds();
+            var width = bounds._northEast.lat - bounds._southWest.lat;
+            var height = bounds._northEast.lng - bounds._southWest.lng;
+            var width2 = bounds2._northEast.lat - bounds2._southWest.lat;
+            var height2 = bounds2._northEast.lng - bounds2._southWest.lng;
+            var zoom = Math.min( width2/width, height2/height );
+            if ( zoom < 1 ) NCinjectCSS( `body {zoom:${zoom} !important}` );
             map._onResize();
             NCwaitTrue( ()=> $("span.map span.help").text() == "done", writePortalsToStorage );
         } );
