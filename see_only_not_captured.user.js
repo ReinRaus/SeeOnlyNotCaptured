@@ -543,7 +543,7 @@ if ( window.location.host == "upor.in" ) {
             result[ portals[item]._latlng.lng+","+portals[item]._latlng.lat ] = portals[item].options.data.team;
         }
         GM.GM_setValue( "NC_portals", result );
-        //window.close();
+        window.close();
     };
 
     var bounds = GM.GM_getValue( "NC_getPortals" );
