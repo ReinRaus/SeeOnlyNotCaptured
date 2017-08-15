@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.4
+// @version      1.4.5
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -222,8 +222,13 @@ window.NCstartMOD = function () {
                     map.off( "zoomend", zoomEndListener );
                 } );
                 map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
+                var geoLayerLoaded = false;
+                window.NCgeoJsonCallback = ()=> { // вызов этой функции появляется во внедрении
+                    window.NCgeoJsonCallback = undefined;
+                    geoLayerLoaded = true;
+                };
                 if ( loadOwners ) NCwaitTrue(
-                    ()=>NCstorage.views[i].zoom==map.getZoom(),
+                    ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded && ( uGeo.getLayers().length == 0 || typeof( uGeo.getLayers()[0]._icon )  !== "undefined" ),
                     ()=>{ NCshowOwners().then( ()=>resolve() ); } );
             }
         } );
@@ -254,9 +259,12 @@ window.NCstartMOD = function () {
     
     window.NCshowOwners = function() {
         return new Promise( (resolve, reject)=>{
+            if ( !map.hasLayer( uGeo ) ) {
+                console.log( "No geolayer" );
+                return;
+            };
+            var markers = uGeo.getLayers();
             var next = function() {
-                if ( !map.hasLayer( uGeo ) ) return;
-                var markers = uGeo.getLayers();
                 var portalsInfo = GM.GM_getValue( "NC_portals" );
                 var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
                 markers.forEach( (item)=> {
@@ -266,9 +274,15 @@ window.NCstartMOD = function () {
                 resolve();
             };
 
+            var lngs = markers.map( item=>item.feature.geometry.coordinates[0] );
+            var lats = markers.map( item=>item.feature.geometry.coordinates[1] );
+            var bounds = { _northEast: { lat: Math.max.apply(null, lats ), lng: Math.max.apply(null, lngs ) },
+                           _southWest: { lat: Math.min.apply(null, lats ), lng: Math.min.apply(null, lngs ) } };
+            var centerLat = ( bounds._northEast.lat + bounds._southWest.lat )/2;
+            var centerLng = ( bounds._northEast.lng + bounds._southWest.lng )/2;
             GM.GM_setValue( "NC_portals", null );
-            GM.GM_setValue( "NC_getPortals", map.getBounds() );
-            var win = window.open( "https://www.ingress.com/intel?ll="+map.getCenter().lat+","+map.getCenter().lng+"&z=15" );
+            GM.GM_setValue( "NC_getPortals", bounds );
+            var win = window.open( "https://www.ingress.com/intel?ll="+centerLat+","+centerLng+"&z=15" );
             NCwaitTrue( ()=>win.closed && GM.GM_getValue( "NC_portals" ), next );
         } );
     };
@@ -381,7 +395,6 @@ window.NCstartMOD = function () {
             if ( !map.hasLayer( uGeo ) ) return;
             var markers = uGeo.getLayers();
             var portalsInfo = GM.GM_getValue( "NC_portals" );
-            var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
             markers.forEach( (item)=> {
                 var key = item.feature.geometry.coordinates.join( "," );
                 if ( key in portalsInfo ) {
@@ -407,6 +420,7 @@ window.NCstartMOD = function () {
              resp.features.forEach( item => { item.properties.popupContent = item.properties.popupContent.replace( /<br>$/i, "<a href='https://rzst.io/stats/?ll="+[...item.geometry.coordinates].reverse().join('%2C')+"' target='_blank' style='float:right'>stats</a><br/><a href='#' style='float:right' onclick='NChide(this)'>hide</a>" ); } );
          };
          self.callback(resp);
+         if ( typeof( window.NCgeoJsonCallback ) !== "undefined" ) NCgeoJsonCallback( resp );
          //end inject` );
     scr = scr.replace( "postData.append('zoom', this._map.getZoom());", "postData.append('zoom', ( this._map.getZoom()>="+window.zoomNC+" && NCstorage.running )? 16 : this._map.getZoom());" );
     var script = document.createElement( "script" );
