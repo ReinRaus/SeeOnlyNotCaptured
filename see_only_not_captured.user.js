@@ -229,7 +229,7 @@ window.NCstartMOD = function () {
                 };
                 if ( loadOwners ) NCwaitTrue(
                     ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded > -1, 
-                    ()=>{ NCshowOwners().then( ()=>resolve() ); }, 5 );
+                    ()=>{ NCshowOwners().then( ()=>resolve() ); }, 50 );
             }
         } );
     };
