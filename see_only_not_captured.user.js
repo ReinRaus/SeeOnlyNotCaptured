@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.5
+// @version      1.4.6
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -222,14 +222,14 @@ window.NCstartMOD = function () {
                     map.off( "zoomend", zoomEndListener );
                 } );
                 map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
-                var geoLayerLoaded = false;
-                window.NCgeoJsonCallback = ()=> { // вызов этой функции появляется во внедрении
+                var geoLayerLoaded = -1;
+                window.NCgeoJsonCallback = ( resp )=> { // вызов этой функции появляется во внедрении
                     window.NCgeoJsonCallback = undefined;
-                    geoLayerLoaded = true;
+                    geoLayerLoaded = resp.features.length;
                 };
                 if ( loadOwners ) NCwaitTrue(
-                    ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded && ( uGeo.getLayers().length == 0 || typeof( uGeo.getLayers()[0]._icon )  !== "undefined" ),
-                    ()=>{ NCshowOwners().then( ()=>resolve() ); } );
+                    ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded > -1, 
+                    ()=>{ NCshowOwners().then( ()=>resolve() ); }, 5 );
             }
         } );
     };
@@ -265,11 +265,12 @@ window.NCstartMOD = function () {
             };
             var markers = uGeo.getLayers();
             var next = function() {
+                markers = uGeo.getLayers(); // refresh
                 var portalsInfo = GM.GM_getValue( "NC_portals" );
                 var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
                 markers.forEach( (item)=> {
                     var key = item.feature.geometry.coordinates.join( "," );
-                    if ( key in portalsInfo ) item._icon.style.borderColor = colors[ portalsInfo[key] ];
+                    if ( key in portalsInfo ) item.getElement().style.borderColor = colors[ portalsInfo[key] ];
                 } );
                 resolve();
             };
@@ -391,9 +392,9 @@ window.NCstartMOD = function () {
         var i = 0;
         var text = "";
         var loadRecursive = function() {
-            text+= `*${NCstorage.views[i].name}*\n`;
             if ( !map.hasLayer( uGeo ) ) return;
             var markers = uGeo.getLayers();
+            text+= `*${NCstorage.views[i].name}* (${markers.length})\n`;
             var portalsInfo = GM.GM_getValue( "NC_portals" );
             markers.forEach( (item)=> {
                 var key = item.feature.geometry.coordinates.join( "," );
