@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.6
+// @version      1.4.7
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -458,6 +458,7 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
 .NCinputName { font-weight: bold; border: none; border-top: 1px dotted}
 .NCmenuHidded {display:none !important}
 #NCstatusText { cursor:pointer; width:100%; text-align:center; background-color: rgba(256, 256, 256, 0.4); font-weight:bold}
+.leaflet-control-container > .leaflet-right { z-index: 2005 }
                      ` );
         
         var convPortalsToFilter = function( portals ) {
