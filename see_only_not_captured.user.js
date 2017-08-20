@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.0
+// @version      1.5.1
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -379,10 +379,10 @@ window.NCstartMOD = function () {
         window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnce, minutes*60000 );
         NCstorage.messageInterval = minutes;
         NCsaveStorage();
-        NClongPooling();
     };
     
     window.NClongPooling = function() {
+        if ( !NCstorage.appKey ) return;
         loadURLasync( 'http://reinraus.ru:5000/uporin?id=' + NCstorage.appKey.split( "X" )[0] )
             .then( resp=> {
                 NClongPooling();
@@ -540,6 +540,7 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         NCloadStorage();
         if ( NCstorage.running ) NCredrawWidget();
         NCnetworkAPI.getData();
+        NClongPooling();
     } );
     // конец исполняется после body
     document.addEventListener( "DOMContentLoaded", function(){
