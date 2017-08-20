@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.4.7
+// @version      1.5.0
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -379,6 +379,17 @@ window.NCstartMOD = function () {
         window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnce, minutes*60000 );
         NCstorage.messageInterval = minutes;
         NCsaveStorage();
+        NClongPooling();
+    };
+    
+    window.NClongPooling = function() {
+        loadURLasync( 'http://reinraus.ru:5000/uporin?id=' + NCstorage.appKey.split( "X" )[0] )
+            .then( resp=> {
+                NClongPooling();
+                var json = JSON.parse( resp.responseText );
+                if ( json.message == "now" ) NCsendTelegramOnce();
+            } )
+            .catch( ()=>NClongPooling() );
     };
     
     window.NCsendTelegramOnce = function(){
