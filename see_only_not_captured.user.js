@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.1
+// @version      1.5.2
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -146,7 +146,7 @@ window.NCstartMOD = function () {
             var html = "";
             for ( var i in NCstorage.views ) {
                 var name = NCstorage.views[i].name;
-                html+= `<div><input class="NCinputName" onchange="NCrenameView(${i}, this)" value="${name?name:i*1+1}" /><br/><a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCloadView(${i},true);'>+owners</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
+                html+= `<div><input class="NCinputName" onchange="NCrenameView(${i}, this)" value="${name?name:'Введите название...'}" /><br/><a href='#' onclick='NCloadView(${i});'>load</a> <a href='#' onclick='NCloadView(${i},true);'>+owners</a> <a href='#' onclick='NCdeleteView(${i});' style='float:right'>delete</a></div>`;
             }
             div.innerHTML = html;
         }
