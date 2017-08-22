@@ -103,7 +103,6 @@ window.NCnetworkAPI = {
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
-    //window.showOnlyNC = false;
     var regex = /[-+]?\d+\.?\d*([eE][-+]?\d+)?(?=px)/g; // https://regex101.com/r/St6vjr/1
 
     window.NCisNeedRunning = function( run ) {
@@ -111,7 +110,6 @@ window.NCstartMOD = function () {
         if ( !run ) uGeo.callback( [] );
         if ( run && map.hasLayer( window.markers ) ) map.removeLayer( window.markers );
         if ( !run && !map.hasLayer( window.markers ) ) map.addLayer( window.markers );
-        document.getElementById( 'NCbutExpText' ).disabled = !run;
     };
     
     window.onZoomNC = function() {
@@ -178,6 +176,10 @@ window.NCstartMOD = function () {
     };
     
     window.NCsaveView = function( ) {
+        if ( map.getZoom() < zoomNC ) {
+            alert( "Необходимо приблизить масштаб, чтобы сохранить участок карты." );
+            return;
+        };
         var result = {};
         result.center = map.getCenter();
         result.zoom = map.getZoom();
@@ -258,6 +260,10 @@ window.NCstartMOD = function () {
     };
     
     window.NCshowOwners = function() {
+        if ( map.getZoom() < zoomNC ) {
+            alert( "Необходимо приблизить масштаб, чтобы загрузить владельцев порталов." );
+            return;
+        };
         return new Promise( (resolve, reject)=>{
             if ( !map.hasLayer( uGeo ) ) {
                 console.log( "No geolayer" );
@@ -289,6 +295,10 @@ window.NCstartMOD = function () {
     };
     
     window.NCexport = function(ev) {
+        if ( window.map.getZoom() < zoomNC ) {
+            alert( "Необходимо приблизить масштаб, чтобы показать названия порталов." );
+            return;
+        };
         var layers = uGeo.getLayers();
         var map = document.getElementById( "map" );
         for ( var i in layers ) {
@@ -335,7 +345,6 @@ window.NCstartMOD = function () {
             hr.style="position:absolute;size:1px;width:100px;z-index:1999;color:red;";
         }
         ev.stopPropagation();
-        document.getElementById( 'NCbutSaveView' ).disabled = false;
     };
     
     window.selectMedalImg = function( medal ) {
@@ -470,6 +479,9 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
 .NCmenuHidded {display:none !important}
 #NCstatusText { cursor:pointer; width:100%; text-align:center; background-color: rgba(256, 256, 256, 0.4); font-weight:bold}
 .leaflet-control-container > .leaflet-right { z-index: 2005 }
+#NCviewsControlWidget img {width:48px}
+#NCviewsControlWidget {display:table; overflow:auto;margin:0px;padding:0px;width:100%}
+#NCviewsControlWidget div {display:table-cell;margin:0px;padding:0px;text-align:center;vertical-align:middle;}
                      ` );
         
         var convPortalsToFilter = function( portals ) {
@@ -499,8 +511,11 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
            </div>
            ◀ УВЕДОМЛЕНИЯ: <span id='NCmessageWidgetStatus'></span>
         </div>
-        <button id='NCbutExpText' disabled>Show titles</button> <button id='NCbutShowOwners'>Show owners</button> <br/>
-        <button id='NCbutSaveView' onclick='NCsaveView();' disabled>Save view</button>
+        <div id='NCviewsControlWidget'>
+            <div class="NCmenuItem" id='NCbutExpText'   ><img title="Показать названия порталов"    src="https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/label.png" /></div>
+            <div class="NCmenuItem" id='NCbutShowOwners'><img title="Загрузить владельцев порталов" src="https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/owner.png" /></div>
+            <div class="NCmenuItem" id='NCbutSaveView'  ><img title="Сохранить участок карты"       src="https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/save.png"  /></div>
+        </div>
         <div id='NCsavedView'></div>
     </div>
     <img id='showNCImg' width=48 height=48 /><br/>
@@ -523,12 +538,13 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         map.on( 'zoomend', window.onZoomNC );
         map.on( "move", ()=> {
             Array.prototype.slice.call(document.getElementsByClassName( "dragLabels" )).forEach( item=>item.remove() );
-            document.getElementById( 'NCbutSaveView' ).disabled = true;
         } );
         var butt = document.getElementById( "NCbutExpText" );
         butt.addEventListener( "click", NCexport, false);
         butt = document.getElementById( "NCbutShowOwners" );
         butt.addEventListener( "click", NCshowOwners, false );
+        butt = document.getElementById( "NCbutSaveView" );
+        butt.addEventListener( "click", NCsaveView, false );
         butt = document.getElementById( "NCbutAppKey" );
         butt.addEventListener( "click", NCsetKey, false );
         butt = document.getElementById( "NCbutDeleteAppKey" );
