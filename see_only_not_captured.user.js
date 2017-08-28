@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.2
+// @version      1.5.3
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -16,6 +16,28 @@
 // ==/UserScript==
 
 function wrapper() { // wrapper: не использовать НЕ латиницу в регулярных выражениях, если все-таки нужно, то new RegExp
+
+window.NCscreenshot = function() {
+    var scr = document.createElement( "script" );
+    scr.src = "https://unpkg.com/leaflet-image@latest/leaflet-image.js";
+    scr.onload = ()=> {
+        var markers = uGeo.getLayers();
+        markers.map( item=>item._icon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAATCAIAAADAoMD9AAAACXBIWXMAAA7EAAAOxAGVKw4bAAACcklEQVQokX2QTU8UQRCGq7p7umdmdwBZCAv4Eb2QmKgXiRHix8HE6M2TV64ejAd/gVESJfHXmOBVE03USAghGBUQXMDdBXZhd5mdnZ7uLg8g8btObypVTz0p/PrxvZCSoafCvE5i+G8JqXKICAA6iYHIOYuM73f+LGZdtp+IyNg07cQm6/yTXdut9x0pcBQ6jU2mgUg768gCgLPEOROeQuSAAARYLa/VqhvdUZRlHav/ThVKci4dGdHbV9Rp2mrWolyO1bbkqzdy8QtJT58eSS6cJ6UAwKTaYAZEaIxxzpZWl/mnD8UnT735BbYXA0MbRe2r4/X7d12UPzyC21vl3sKArVbMzRv+7NzPAsT53u1btXt3XOAf/GSzXGo26nz6ufq89JsuWhu8fpdbLgHjAGCcZaEKNtZL7ZcvIEkOpiYnYWJiP/JKVZarys9pY7VjwpeeczZJ2+Ehs9GAdvsHHx3RXkfzoOv4sVMCEH0/oNFRejaN7QQAYGrqcDEbHNjtK/hBWBw6IZXPiIghuOvX9Nkz9Ku387zmpTE1Nj509JQnVau5gxtL81x4AIDlcvjwsT8zy+s7wJnu7W3fvA4PHvUMDllr69uVreo6riy89cM8IgcivbXJZuaKeyl5XnN4QFy+EvUXrTGVynprZzMKQ+Gs0TqRKkRkrK9/5+JoYeSclKrLGcaE1p3y+krabnXnI865AABnrBOOM0Qil2lrNCqfcy+OW99Ki0TQle9GJAAQQkrh+ZwL52wrbvYUBpQfAkBzt14tlwRCGIYmSx0YzwuEVOG+dL0R57t6BodPMsYbu9trq4tRmAtUkOmO1gkQIeB3sw87tmpVZREAAAAASUVORK5CYII=" );
+        leafletImage( map, function(err, canvas) {
+            var cnt = canvas.getContext( '2d' );
+            markers.map( item=>{
+                cnt.beginPath();
+                var q = item._icon.getBoundingClientRect();
+                cnt.arc( q.left+7, q.top+5, 6, Math.PI*2, false );
+                cnt.fillStyle = "red";
+                cnt.fill();
+            } );
+            document.body.appendChild(canvas);
+        } );
+    };
+    document.body.appendChild( scr );
+};
+    
 window.NCwaitTrue = function( expressionFunc, next, delay=20 ) {
     var interval = window.setInterval( ()=>{
             if ( expressionFunc() ) {
@@ -226,8 +248,10 @@ window.NCstartMOD = function () {
                 map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
                 var geoLayerLoaded = -1;
                 window.NCgeoJsonCallback = ( resp )=> { // вызов этой функции появляется во внедрении
-                    window.NCgeoJsonCallback = undefined;
-                    geoLayerLoaded = resp.features.length;
+                    if ( resp.features ) {
+                        window.NCgeoJsonCallback = undefined;
+                        geoLayerLoaded = resp.features.length;
+                    };
                 };
                 if ( loadOwners ) NCwaitTrue(
                     ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded > -1, 
@@ -385,9 +409,14 @@ window.NCstartMOD = function () {
             alert( "Введите число больше 1" );
             return;
         }
-        window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnce, minutes*60000 );
+        window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnceInChild, minutes*60000 );
         NCstorage.messageInterval = minutes;
         NCsaveStorage();
+    };
+    
+    window.NCsendTelegramOnceInChild = function(){
+        GM.GM_setValue( "NC_isChildForTelegramMessage", true );
+        NCwaitTrue( ()=>GM.GM_getValue( "NC_isChildForTelegramMessage" ), ()=>window.open( "https://upor.in/caps/" ) );
     };
     
     window.NClongPooling = function() {
@@ -402,33 +431,38 @@ window.NCstartMOD = function () {
     };
     
     window.NCsendTelegramOnce = function(){
-        var err;
-        if ( !NCstorage.appKey ) err = "Не задан ключ";
-        if ( !NCstorage.views || NCstorage.views.length === 0 ) err = "Отсутствуют сохраненные виды";
-        if (err) {
-            alert( err );
-            return;
-        }
-        var i = 0;
-        var text = "";
-        var loadRecursive = function() {
-            if ( !map.hasLayer( uGeo ) ) return;
-            var markers = uGeo.getLayers();
-            text+= `*${NCstorage.views[i].name}* (${markers.length})\n`;
-            var portalsInfo = GM.GM_getValue( "NC_portals" );
-            markers.forEach( (item)=> {
-                var key = item.feature.geometry.coordinates.join( "," );
-                if ( key in portalsInfo ) {
-                    if ( portalsInfo[key] == "E" ) text+= "Ⓔ "+item.feature.properties.title+"\n";
-                    else if ( portalsInfo[key] == "N" ) text+= "◯ "+item.feature.properties.title+"\n";
-                }
-            } );
-            text+= "\n";
-            i++;
-            if ( i < NCstorage.views.length ) NCloadView( i, true ).then( loadRecursive );
-            else NCnetworkAPI.sendMessage( text );
-        };
-        NCloadView( i, true ).then( loadRecursive );
+        return new Promise( (resolve, reject) => {
+            var err;
+            if ( !NCstorage.appKey ) err = "Не задан ключ";
+            if ( !NCstorage.views || NCstorage.views.length === 0 ) err = "Отсутствуют сохраненные виды";
+            if (err) {
+                alert( err );
+                return;
+            }
+            var i = 0;
+            var text = "";
+            var loadRecursive = function() {
+                if ( !map.hasLayer( uGeo ) ) return;
+                var markers = uGeo.getLayers();
+                text+= `*${NCstorage.views[i].name}* (${markers.length})\n`;
+                var portalsInfo = GM.GM_getValue( "NC_portals" );
+                markers.forEach( (item)=> {
+                    var key = item.feature.geometry.coordinates.join( "," );
+                    if ( key in portalsInfo ) {
+                        if ( portalsInfo[key] == "E" ) text+= "Ⓔ "+item.feature.properties.title+"\n";
+                        else if ( portalsInfo[key] == "N" ) text+= "◯ "+item.feature.properties.title+"\n";
+                    }
+                } );
+                text+= "\n";
+                i++;
+                if ( i < NCstorage.views.length ) NCloadView( i, true ).then( loadRecursive );
+                else {
+                    NCnetworkAPI.sendMessage( text );
+                    resolve();
+                };
+            };
+            NCloadView( i, true ).then( loadRecursive );
+        } );
     };
     
     // внедряем измененный https://upor.in/js/leaflet.uGeoJSON.js
@@ -558,10 +592,6 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         NCnetworkAPI.getData();
         NClongPooling();
     } );
-    // конец исполняется после body
-    document.addEventListener( "DOMContentLoaded", function(){
-        window.setTimeout( ()=>{ if ( !document.getElementsByClassName( "NCbutton" ) ) window.location.href = "https://upor.in/caps/?rand="+Math.random();}, 10000 );
-    } );
 };
 
 // один мод на два сайта
@@ -579,6 +609,15 @@ if ( window.location.host == "upor.in" ) {
         }
     } );
 
+    // конец исполняется после body
+    document.addEventListener( "DOMContentLoaded", function(){
+        if ( GM.GM_getValue( "NC_isChildForTelegramMessage" ) ) {
+            GM.GM_setValue( "NC_isChildForTelegramMessage", false );
+            NCsendTelegramOnce().then( ()=>window.setTimeout( ()=>{ window.top.focus(); window.close();}, 10000 ) );
+        };
+        if( !window.L ) location.reload();
+    } );
+    
 } else {
     
     var writePortalsToStorage = ()=> {
