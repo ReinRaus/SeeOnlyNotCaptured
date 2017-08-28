@@ -425,7 +425,7 @@ window.NCstartMOD = function () {
             .then( resp=> {
                 NClongPooling();
                 var json = JSON.parse( resp.responseText );
-                if ( json.message == "now" ) NCsendTelegramOnce();
+                if ( json.message == "now" ) NCsendTelegramOnceInChild();
             } )
             .catch( ()=>NClongPooling() );
     };
