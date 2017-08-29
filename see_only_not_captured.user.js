@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.5
+// @version      1.5.6
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -242,20 +242,12 @@ window.NCstartMOD = function () {
                                 labels[j].dragListener();
                             }
                         }
+                        if ( loadOwners ) NCshowOwners().then( ()=>resolve() );
+                        else resolve();
                     };
                     map.off( "zoomend", zoomEndListener );
                 } );
                 map.flyTo( [NCstorage.views[i].center.lat, NCstorage.views[i].center.lng], NCstorage.views[i].zoom );
-                var geoLayerLoaded = -1;
-                window.NCgeoJsonCallback = ( resp )=> { // вызов этой функции появляется во внедрении
-                    if ( resp.features ) {
-                        window.NCgeoJsonCallback = undefined;
-                        geoLayerLoaded = resp.features.length;
-                    };
-                };
-                if ( loadOwners ) NCwaitTrue(
-                    ()=>NCstorage.views[i].zoom==map.getZoom() && geoLayerLoaded > -1, 
-                    ()=>{ NCshowOwners().then( ()=>resolve() ); }, 50 );
             }
         } );
     };
@@ -414,11 +406,6 @@ window.NCstartMOD = function () {
         NCsaveStorage();
     };
     
-    window.NCsendTelegramOnceInChild = function(){
-        GM.GM_setValue( "NC_isChildForTelegramMessage", true );
-        NCwaitTrue( ()=>GM.GM_getValue( "NC_isChildForTelegramMessage" ), ()=>window.open( "https://upor.in/caps/" ) );
-    };
-    
     window.NClongPooling = function() {
         if ( !NCstorage.appKey ) return;
         loadURLasync( 'http://reinraus.ru:5000/uporin?id=' + NCstorage.appKey.split( "X" )[0] )
@@ -426,8 +413,9 @@ window.NCstartMOD = function () {
                 NClongPooling();
                 var json = JSON.parse( resp.responseText );
                 console.log( json.message );
-                if ( /^\/now\b/i.test( json.message ) ) NCsendTelegramOnceInChild();
+                if ( /^\/now\b/i.test( json.message ) ) NCcallEventInChild( "NCsendTelegramOnce" );
                 else if ( /^\/refresh\b/i.test( json.message ) ) NCsoftRefresh();
+                else if ( /^\/list\b/i.test( json.message ) ) NCcallEventInChild( "NCsendList" );
             } )
             .catch( ()=>NClongPooling() );
     };
@@ -435,6 +423,42 @@ window.NCstartMOD = function () {
     window.NCsoftRefresh = function(){
         if ( window.NCmessageIntervalID ) localStorage.NCisSoftRefresh = true;
         location.reload();
+    };
+    
+    window.NCcallEventInChild = function( event ){
+        GM.GM_setValue( "NC_isChildWindowEvent", event );
+        NCwaitTrue( ()=>GM.GM_getValue( "NC_isChildWindowEvent" ), ()=>window.open( "https://upor.in/caps/" ) );
+    };
+    
+    window.NCsendList = function(){
+        return new Promise( (resolve, reject)=> {
+            var err;
+            if ( !NCstorage.appKey ) err = "Не задан ключ";
+            if ( !NCstorage.views || NCstorage.views.length === 0 ) err = "Отсутствуют сохраненные виды";
+            if (err) {
+                alert( err );
+                return;
+            }
+            var i = 0;
+            var text = "";
+            var loadRecursive = function(){
+                if ( !map.hasLayer( uGeo ) ) return;
+                var markers = uGeo.getLayers();
+                console.log( markers );
+                text+= `*${NCstorage.views[i].name}* (${markers.length})\n`;
+                markers.forEach( (item)=> {
+                    text+= item.feature.properties.title+"\n";
+                } );
+                text+= "\n";
+                i++;
+                if ( i < NCstorage.views.length ) NCloadView( i ).then( loadRecursive );
+                else {
+                    NCnetworkAPI.sendMessage( text );
+                    resolve();
+                };
+            };
+            NCloadView( i ).then( loadRecursive );
+        } );
     };
     
     window.NCsendTelegramOnce = function(){
@@ -621,15 +645,16 @@ if ( window.location.host == "upor.in" ) {
 
     // конец исполняется после body
     document.addEventListener( "DOMContentLoaded", function(){
-        if ( GM.GM_getValue( "NC_isChildForTelegramMessage" ) ) {
-            GM.GM_setValue( "NC_isChildForTelegramMessage", false );
-            NCwaitTrue( ()=>window.NCstorage, ()=>
-                NCsendTelegramOnce().then( ()=>window.setTimeout( ()=>{ window.top.focus(); window.close();}, 10000 ) )
-            );
+        if( !window.L ) location.reload();
+        var event = GM.GM_getValue( "NC_isChildWindowEvent" );
+        if ( event ) { // тут должно быть имя вызываемой функции
+            GM.GM_setValue( "NC_isChildWindowEvent", false );
+            NCwaitTrue( ()=>window.NCstorage, ()=>{
+                window[event]().then( ()=>window.setTimeout( ()=>{ window.top.focus(); window.close();}, 3000 ) )
+            } );
         } else {
             NCwaitTrue( ()=>window.NCstorage, NClongPooling );
         };
-        if( !window.L ) location.reload();
     } );
     
 } else {
