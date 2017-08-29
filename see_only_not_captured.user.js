@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.4
+// @version      1.5.5
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -425,9 +425,16 @@ window.NCstartMOD = function () {
             .then( resp=> {
                 NClongPooling();
                 var json = JSON.parse( resp.responseText );
-                if ( json.message == "now" ) NCsendTelegramOnceInChild();
+                console.log( json.message );
+                if ( /^\/now\b/i.test( json.message ) ) NCsendTelegramOnceInChild();
+                else if ( /^\/refresh\b/i.test( json.message ) ) NCsoftRefresh();
             } )
             .catch( ()=>NClongPooling() );
+    };
+    
+    window.NCsoftRefresh = function(){
+        if ( window.NCmessageIntervalID ) localStorage.NCisSoftRefresh = true;
+        location.reload();
     };
     
     window.NCsendTelegramOnce = function(){
@@ -588,6 +595,10 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         butt = document.getElementById( "NCbutStopTelegram" );
         butt.addEventListener( "click", NCstopTelegram, false );
         NCloadStorage();
+        if ( localStorage.NCisSoftRefresh ) {
+            delete localStorage.NCisSoftRefresh;
+            NCsendTelegramRepeat();
+        }
         if ( NCstorage.running ) NCredrawWidget();
         NCnetworkAPI.getData();
     } );
