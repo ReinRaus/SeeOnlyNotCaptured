@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.3
+// @version      1.5.4
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -590,7 +590,6 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         NCloadStorage();
         if ( NCstorage.running ) NCredrawWidget();
         NCnetworkAPI.getData();
-        NClongPooling();
     } );
 };
 
@@ -613,7 +612,11 @@ if ( window.location.host == "upor.in" ) {
     document.addEventListener( "DOMContentLoaded", function(){
         if ( GM.GM_getValue( "NC_isChildForTelegramMessage" ) ) {
             GM.GM_setValue( "NC_isChildForTelegramMessage", false );
-            NCsendTelegramOnce().then( ()=>window.setTimeout( ()=>{ window.top.focus(); window.close();}, 10000 ) );
+            NCwaitTrue( ()=>window.NCstorage, ()=>
+                NCsendTelegramOnce().then( ()=>window.setTimeout( ()=>{ window.top.focus(); window.close();}, 10000 ) )
+            );
+        } else {
+            NCwaitTrue( ()=>window.NCstorage, NClongPooling );
         };
         if( !window.L ) location.reload();
     } );
