@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.6
+// @version      1.5.7
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -426,19 +426,16 @@ window.NCstartMOD = function () {
     };
     
     window.NCcallEventInChild = function( event ){
+        if ( event == "NCsendList" && GM.GM_getValue( "NC_listCache" ) ) {
+            NCnetworkAPI.sendMessage( "_Данные из кэша. Для актуальных данных сделайте_ /refresh\n\n"+GM.GM_getValue( "NC_listCache" ) );
+            return;
+        }
         GM.GM_setValue( "NC_isChildWindowEvent", event );
         NCwaitTrue( ()=>GM.GM_getValue( "NC_isChildWindowEvent" ), ()=>window.open( "https://upor.in/caps/" ) );
     };
     
     window.NCsendList = function(){
         return new Promise( (resolve, reject)=> {
-            var err;
-            if ( !NCstorage.appKey ) err = "Не задан ключ";
-            if ( !NCstorage.views || NCstorage.views.length === 0 ) err = "Отсутствуют сохраненные виды";
-            if (err) {
-                alert( err );
-                return;
-            }
             var i = 0;
             var text = "";
             var loadRecursive = function(){
@@ -453,6 +450,7 @@ window.NCstartMOD = function () {
                 i++;
                 if ( i < NCstorage.views.length ) NCloadView( i ).then( loadRecursive );
                 else {
+                    GM.GM_setValue( "NC_listCache", text );;
                     NCnetworkAPI.sendMessage( text );
                     resolve();
                 };
@@ -654,6 +652,7 @@ if ( window.location.host == "upor.in" ) {
             } );
         } else {
             NCwaitTrue( ()=>window.NCstorage, NClongPooling );
+            GM.GM_setValue( "NC_listCache", false );
         };
     } );
     
