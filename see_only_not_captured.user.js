@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.7
+// @version      1.5.8
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -401,7 +401,7 @@ window.NCstartMOD = function () {
             alert( "Введите число больше 1" );
             return;
         }
-        window.NCmessageIntervalID = window.setInterval( NCsendTelegramOnceInChild, minutes*60000 );
+        window.NCmessageIntervalID = window.setInterval( ()=>NCcallEventInChild( "NCsendTelegramOnce" ), minutes*60000 );
         NCstorage.messageInterval = minutes;
         NCsaveStorage();
     };
