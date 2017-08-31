@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.8
+// @version      1.5.9
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -242,8 +242,8 @@ window.NCstartMOD = function () {
                                 labels[j].dragListener();
                             }
                         }
-                        if ( loadOwners ) NCshowOwners().then( ()=>resolve() );
-                        else resolve();
+                        if ( loadOwners ) NCshowOwners().then( ()=>resolve( data ) );
+                        else resolve( data );
                     };
                     map.off( "zoomend", zoomEndListener );
                 } );
@@ -412,7 +412,7 @@ window.NCstartMOD = function () {
             .then( resp=> {
                 NClongPooling();
                 var json = JSON.parse( resp.responseText );
-                console.log( json.message );
+                if ( json.message !== "timeout" ) console.log( "Message from server: " + json.message );
                 if ( /^\/now\b/i.test( json.message ) ) NCcallEventInChild( "NCsendTelegramOnce" );
                 else if ( /^\/refresh\b/i.test( json.message ) ) NCsoftRefresh();
                 else if ( /^\/list\b/i.test( json.message ) ) NCcallEventInChild( "NCsendList" );
@@ -438,10 +438,9 @@ window.NCstartMOD = function () {
         return new Promise( (resolve, reject)=> {
             var i = 0;
             var text = "";
-            var loadRecursive = function(){
+            var loadRecursive = function( data ){
                 if ( !map.hasLayer( uGeo ) ) return;
                 var markers = uGeo.getLayers();
-                console.log( markers );
                 text+= `*${NCstorage.views[i].name}* (${markers.length})\n`;
                 markers.forEach( (item)=> {
                     text+= item.feature.properties.title+"\n";
@@ -450,7 +449,7 @@ window.NCstartMOD = function () {
                 i++;
                 if ( i < NCstorage.views.length ) NCloadView( i ).then( loadRecursive );
                 else {
-                    GM.GM_setValue( "NC_listCache", text );;
+                    GM.GM_setValue( "NC_listCache", text );
                     NCnetworkAPI.sendMessage( text );
                     resolve();
                 };
@@ -507,6 +506,7 @@ window.NCstartMOD = function () {
          if ( typeof( window.NCgeoJsonCallback ) !== "undefined" ) NCgeoJsonCallback( resp );
          //end inject` );
     scr = scr.replace( "postData.append('zoom', this._map.getZoom());", "postData.append('zoom', ( this._map.getZoom()>="+window.zoomNC+" && NCstorage.running )? 16 : this._map.getZoom());" );
+    scr = scr.replace( "map.on('zoomend'", "//map.on('zoomend'" ); // фиксим баг упорина
     var script = document.createElement( "script" );
     script.innerHTML = scr;
     document.head.appendChild( script ); // теперь будет работать измененный Layer
