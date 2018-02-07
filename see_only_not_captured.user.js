@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.5.9
+// @version      1.6.0
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -663,13 +663,13 @@ if ( window.location.host == "upor.in" ) {
         for ( var item in portals ) {
             result[ portals[item]._latlng.lng+","+portals[item]._latlng.lat ] = portals[item].options.data.team;
         }
+        GM.GM_setValue( "NC_getPortals", null );
         GM.GM_setValue( "NC_portals", result );
         window.close();
     };
 
     var bounds = GM.GM_getValue( "NC_getPortals" );
     if ( bounds ) {
-        GM.GM_setValue( "NC_getPortals", null );
         NCwaitTrue( ()=>{ return (typeof( window.map )!=="undefined" && typeof( map._onResize )!=="undefined"); }, ()=>{
             var bounds2 = map.getBounds();
             var width = bounds._northEast.lat - bounds._southWest.lat;
