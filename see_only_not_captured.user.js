@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.0
+// @version      1.6.1
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -37,7 +37,7 @@ window.NCscreenshot = function() {
     };
     document.body.appendChild( scr );
 };
-    
+
 window.NCwaitTrue = function( expressionFunc, next, delay=20 ) {
     var interval = window.setInterval( ()=>{
             if ( expressionFunc() ) {
@@ -126,10 +126,11 @@ window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
     var regex = /[-+]?\d+\.?\d*([eE][-+]?\d+)?(?=px)/g; // https://regex101.com/r/St6vjr/1
+    GM.GM_setValue( "NC_portals", null );
 
     window.NCisNeedRunning = function( run ) {
         selectMedalImg( run ? "onyx" : "gold" );
-        if ( !run ) uGeo.callback( [] );
+        if ( !run ) Object.keys( uGeo._layers ).map( item=>uGeo.removeLayer(item) );
         if ( run && map.hasLayer( window.markers ) ) map.removeLayer( window.markers );
         if ( !run && !map.hasLayer( window.markers ) ) map.addLayer( window.markers );
     };
@@ -274,7 +275,19 @@ window.NCstartMOD = function () {
     window.customFilter = function( item ){
         return !(item.geometry.coordinates[1]+"|"+item.geometry.coordinates[0] in prt);
     };
-    
+
+    window.NCpaintMarkers = function() {
+        if ( !map.hasLayer( uGeo ) ) return;
+        var markers = uGeo.getLayers(); // refresh
+        var portalsInfo = GM.GM_getValue( "NC_portals" );
+        if ( !portalsInfo ) return;
+        var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
+        markers.forEach( (item)=> {
+            var key = item.feature.geometry.coordinates.join( "," );
+            if ( key in portalsInfo ) item.getElement().style.borderColor = colors[ portalsInfo[key] ];
+        } );
+    };
+
     window.NCshowOwners = function() {
         if ( map.getZoom() < zoomNC ) {
             alert( "Необходимо приблизить масштаб, чтобы загрузить владельцев порталов." );
@@ -287,25 +300,17 @@ window.NCstartMOD = function () {
             };
             var markers = uGeo.getLayers();
             var next = function() {
-                markers = uGeo.getLayers(); // refresh
-                var portalsInfo = GM.GM_getValue( "NC_portals" );
-                var colors = { E: "rgb(3, 220, 3)", R: "rgb(0, 136, 255)", N: "gold" };
-                markers.forEach( (item)=> {
-                    var key = item.feature.geometry.coordinates.join( "," );
-                    if ( key in portalsInfo ) item.getElement().style.borderColor = colors[ portalsInfo[key] ];
-                } );
+                NCpaintMarkers();
                 resolve();
             };
 
-            var lngs = markers.map( item=>item.feature.geometry.coordinates[0] );
-            var lats = markers.map( item=>item.feature.geometry.coordinates[1] );
-            var bounds = { _northEast: { lat: Math.max.apply(null, lats ), lng: Math.max.apply(null, lngs ) },
-                           _southWest: { lat: Math.min.apply(null, lats ), lng: Math.min.apply(null, lngs ) } };
-            var centerLat = ( bounds._northEast.lat + bounds._southWest.lat )/2;
-            var centerLng = ( bounds._northEast.lng + bounds._southWest.lng )/2;
+            var result = {};
+            result.bounds = map.getBounds();
+            result.center = map.getCenter();
+            result.mapSize = map.getSize();
             GM.GM_setValue( "NC_portals", null );
-            GM.GM_setValue( "NC_getPortals", bounds );
-            var win = window.open( "https://www.ingress.com/intel?ll="+centerLat+","+centerLng+"&z=15" );
+            GM.GM_setValue( "NC_getPortals", result );
+            var win = window.open( "https://www.ingress.com/intel?ll="+result.center.lat+","+result.center.lng+"&z=15" );
             NCwaitTrue( ()=>win.closed && GM.GM_getValue( "NC_portals" ), next );
         } );
     };
@@ -323,12 +328,12 @@ window.NCstartMOD = function () {
             var m = transform.match( regex );
             var x0 = parseFloat(m[0])+parseFloat(shift[0]); // marker X
             var y0 = parseFloat(m[1])+parseFloat(shift[1]); // marker Y
-            
+
             var div = document.createElement( "div" );
             div.className = "dragLabels";
             div.innerHTML = "<HR noshade color=red style='position:absolute;width:10px;z-index:1999;transform:rotate(123deg);transform-origin: 0 0;' data-x0='"+(x0-6)+"' data-y0='"+(y0-15)+"' /><SPAN style='background-color:white;position:absolute;white-space:nowrap;z-index:2000;cursor:move'>"+layers[i].feature.properties.title+"</SPAN>";
             div.style = "z-index:2000;position:absolute;";
-            
+
             L.DomUtil.setPosition( div, L.point( x0, y0-25 ) );
             var drag = new L.Draggable( div );
             var dragListener = ((element)=>{
@@ -504,9 +509,11 @@ window.NCstartMOD = function () {
          };
          self.callback(resp);
          if ( typeof( window.NCgeoJsonCallback ) !== "undefined" ) NCgeoJsonCallback( resp );
+         NCpaintMarkers();
          //end inject` );
     scr = scr.replace( "postData.append('zoom', this._map.getZoom());", "postData.append('zoom', ( this._map.getZoom()>="+window.zoomNC+" && NCstorage.running )? 16 : this._map.getZoom());" );
     scr = scr.replace( "map.on('zoomend'", "//map.on('zoomend'" ); // фиксим баг упорина
+    scr = scr.replace( "light: true", "light: false" );
     var script = document.createElement( "script" );
     script.innerHTML = scr;
     document.head.appendChild( script ); // теперь будет работать измененный Layer
@@ -668,16 +675,24 @@ if ( window.location.host == "upor.in" ) {
         window.close();
     };
 
-    var bounds = GM.GM_getValue( "NC_getPortals" );
-    if ( bounds ) {
+    var area = GM.GM_getValue( "NC_getPortals" );
+    if ( area ) {
         NCwaitTrue( ()=>{ return (typeof( window.map )!=="undefined" && typeof( map._onResize )!=="undefined"); }, ()=>{
+            map.setZoom( 15 );
+            $( "#map" ).width( area.mapSize.x+"px" );
+            $( "#map" ).height( area.mapSize.y+"px" );
+            map.invalidateSize();
             var bounds2 = map.getBounds();
-            var width = bounds._northEast.lat - bounds._southWest.lat;
-            var height = bounds._northEast.lng - bounds._southWest.lng;
+            var width = area.bounds._northEast.lat - area.bounds._southWest.lat;
+            var height = area.bounds._northEast.lng - area.bounds._southWest.lng;
             var width2 = bounds2._northEast.lat - bounds2._southWest.lat;
             var height2 = bounds2._northEast.lng - bounds2._southWest.lng;
             var zoom = Math.min( width2/width, height2/height );
-            if ( zoom < 1 ) NCinjectCSS( `body {zoom:${zoom} !important}` );
+            $( "#map" ).width( area.mapSize.x/zoom+"px" );
+            $( "#map" ).height( area.mapSize.y/zoom+"px" );
+            map.invalidateSize();
+            NCinjectCSS( `body {zoom:${zoom} !important}` );
+            map.setView( area.center );
             map._onResize();
             NCwaitTrue( ()=> $("span.map span.help").text() == "done", writePortalsToStorage );
         } );
