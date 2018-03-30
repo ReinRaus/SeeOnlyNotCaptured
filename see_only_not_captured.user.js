@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.1
+// @version      1.6.2
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -578,6 +578,7 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
                <div id='NCmessageInterval' class='NCmenuItem'>Интервал: <input id="NCtelegramDelay" size=1 /> мин</div>
                <div id='NCbutSendTelegram' class='NCmenuItem'>Включить</div>
                <div id='NCbutStopTelegram' class='NCmenuItem'>Остановить</div>
+               <div id='NCbutNowTelegram'  class='NCmenuItem'>Отправить сейчас</div>
            </div>
            ◀ УВЕДОМЛЕНИЯ: <span id='NCmessageWidgetStatus'></span>
         </div>
@@ -623,6 +624,8 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
         butt.addEventListener( "click", NCsendTelegramRepeat, false );
         butt = document.getElementById( "NCbutStopTelegram" );
         butt.addEventListener( "click", NCstopTelegram, false );
+        butt = document.getElementById( "NCbutNowTelegram" );
+        butt.addEventListener( "click", NCsendTelegramOnce, false );
         NCloadStorage();
         if ( localStorage.NCisSoftRefresh ) {
             delete localStorage.NCisSoftRefresh;
