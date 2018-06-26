@@ -413,7 +413,7 @@ window.NCstartMOD = function () {
     
     window.NClongPooling = function() {
         if ( !NCstorage.appKey ) return;
-        loadURLasync( 'http://reinraus.ru:5000/uporin?id=' + NCstorage.appKey.split( "X" )[0] )
+        loadURLasync( 'http://reinraus.ru:5000/uporin?id=' + NCstorage.appKey.split( "@" )[0] )
             .then( resp=> {
                 NClongPooling();
                 var json = JSON.parse( resp.responseText );
