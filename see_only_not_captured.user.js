@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.3
+// @version      1.6.4
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -488,6 +488,7 @@ window.NCstartMOD = function () {
                 } );
                 text+= "\n";
                 i++;
+                uGeo.clearLayers();
                 if ( i < NCstorage.views.length ) NCloadView( i, true ).then( loadRecursive );
                 else {
                     NCnetworkAPI.sendMessage( text );
