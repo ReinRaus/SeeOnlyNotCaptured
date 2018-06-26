@@ -379,7 +379,7 @@ window.NCstartMOD = function () {
         var key = prompt( "Введите полученный ключ" );
         if ( !key ) return; // cancel button
         if ( key ) key = key.trim();
-        if ( !key.match( /^[a-z0-9]+X[a-z0-9]+$/i ) ) {
+        if ( !key.match( /^[a-z0-9]+@[a-z0-9]+$/i ) ) {
             alert( "Некорректный ключ" );
         } else {
             NCstorage.appKey = key;
