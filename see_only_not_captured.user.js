@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.4
+// @version      1.6.5
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -125,6 +125,7 @@ window.NCnetworkAPI = {
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
+    window.NClastMessage = ""; // последнее отправленное сообщение в телегу полный текст
     var regex = /[-+]?\d+\.?\d*([eE][-+]?\d+)?(?=px)/g; // https://regex101.com/r/St6vjr/1
     GM.GM_setValue( "NC_portals", null );
 
@@ -491,6 +492,8 @@ window.NCstartMOD = function () {
                 uGeo.clearLayers();
                 if ( i < NCstorage.views.length ) NCloadView( i, true ).then( loadRecursive );
                 else {
+                    if ( NClastMessage == text ) text = "Изменений нет.";
+                    else NClastMessage = text;
                     NCnetworkAPI.sendMessage( text );
                     resolve();
                 };
