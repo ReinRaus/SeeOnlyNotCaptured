@@ -642,7 +642,9 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
 
 // один мод на два сайта
 if ( window.location.host == "upor.in" ) {
-    // началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
+    /* началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
+       если L установлен, то тамперманки внедрил userjs позже инициализации leaflet, надо перезагрузить */
+    if ( window.L ) location.reload(true);
     Object.defineProperty( window, "L", {
         configurable: true,
         set: (leaflet)=>{
@@ -657,7 +659,6 @@ if ( window.location.host == "upor.in" ) {
 
     // конец исполняется после body
     document.addEventListener( "DOMContentLoaded", function(){
-        if( !window.L ) location.reload();
         var event = GM.GM_getValue( "NC_isChildWindowEvent" );
         if ( event ) { // тут должно быть имя вызываемой функции
             GM.GM_setValue( "NC_isChildWindowEvent", false );
