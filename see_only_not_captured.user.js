@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.6
+// @version      1.6.7
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -644,7 +644,9 @@ div.NCwidget:hover div.NCmenuHidded {display:none !important}
 if ( window.location.host == "upor.in" ) {
     /* началом внедрения служит установка L.UGeoJSONLayer - именно в этот момент внедряемся
        если L установлен, то тамперманки внедрил userjs позже инициализации leaflet, надо перезагрузить */
-    if ( window.L ) location.reload(true);
+    if ( window.L ) {
+        window.open( "https://upor.in/caps/?rand="+Math.random(), "_self" );
+    };
     Object.defineProperty( window, "L", {
         configurable: true,
         set: (leaflet)=>{
