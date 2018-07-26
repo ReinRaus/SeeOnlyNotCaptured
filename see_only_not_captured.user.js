@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         UporinMOD
 // @namespace    https://upor.in/caps/
-// @version      1.6.8
+// @version      1.6.9
 // @description  Now you see me
 // @author       ReinRaus
 // @updateURL    https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
@@ -122,6 +122,20 @@ window.NCnetworkAPI = {
     }
 };
 
+window.NCparseStorage = function () {
+    try {
+        window.NCstorage = JSON.parse( localStorage.NCstorage );
+        if ( !NCstorage.views ) throw "old version";
+    } catch(e) {
+        // если есть что-то уже, то это старая версия- помещаем в labels
+        var labels = window.NCstorage && NCstorage.length > 0 ? NCstorage : [];
+        window.NCstorage = {
+            'views' : labels,
+            'deleted': [] };
+    }
+};
+window.NCparseStorage();
+
 window.NCstartMOD = function () {
     'use strict';
     window.zoomNC = 13;
@@ -147,16 +161,7 @@ window.NCstartMOD = function () {
     };
     
     window.NCloadStorage = function(){
-        try {
-            window.NCstorage = JSON.parse( localStorage.NCstorage );
-            if ( !NCstorage.views ) throw "old version";
-        } catch(e) {
-            // если есть что-то уже, то это старая версия- помещаем в labels
-            var labels = window.NCstorage && NCstorage.length > 0 ? NCstorage : [];
-            window.NCstorage = {
-                'views' : labels,
-                'deleted': [] };
-        }
+        window.NCparseStorage();
         // если пользователь явно не указал состояние, то сразу включаем
         if ( typeof( NCstorage.running ) === undefined ) {
             NCstorage.running = true;
