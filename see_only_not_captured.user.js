@@ -2,7 +2,7 @@
 // @id             iitc-plugin-uporin@jonatkins
 // @name           IITC plugin: Uporin
 // @author         ReinRaus
-// @version        2.0
+// @version        2.0.1
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
 // @updateURL      https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
 // @description    Show only not captured portal
@@ -88,7 +88,7 @@ uporin.start = function() {
   } );
 
   window.addPortalHighlighter( 'Only not captured', (data)=>{
-      if ( uporin.portals && !(data.portal._latlng.lat+","+data.portal._latlng.lng in uporin.portals) ) data.portal.setStyle({color: "#FF0000", weight: 3.5, fillOpacity:1});
+      if ( uporin.portals && !(data.portal._latlng.lat+","+data.portal._latlng.lng in uporin.portals) ) data.portal.setStyle({weight: 3.5, fillOpacity:1});
       else data.portal.setStyle({opacity: 0.1, fillOpacity:0.1});
   } );
 
