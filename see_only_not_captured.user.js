@@ -2,14 +2,14 @@
 // @id             iitc-plugin-uporin@jonatkins
 // @name           IITC plugin: Uporin
 // @author         ReinRaus
-// @version        2.0.1
+// @version        2.0.2
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
 // @updateURL      https://github.com/ReinRaus/SeeOnlyNotCaptured/raw/master/see_only_not_captured.user.js
 // @description    Show only not captured portal
-// @include        https://*.ingress.com/intel*
-// @include        http://*.ingress.com/intel*
-// @match          https://*.ingress.com/intel*
-// @match          http://*.ingress.com/intel*
+// @include        https://intel.ingress.com/*
+// @include        http://intel.ingress.com/*
+// @match          https://intel.ingress.com/*
+// @match          http://intel.ingress.com/*
 // @grant          GM_xmlhttpRequest
 // @connect        upor.in
 // ==/UserScript==
